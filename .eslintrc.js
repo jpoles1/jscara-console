@@ -4,10 +4,12 @@ module.exports = {
     node: true
   },
   extends: ["plugin:vue/essential", "@vue/prettier", "@vue/typescript"],
-  rules: {
-    "no-console": process.env.NODE_ENV === "production" ? "error" : "off",
-    "no-debugger": process.env.NODE_ENV === "production" ? "error" : "off"
-  },
+	rules: {
+		"no-console": process.env.NODE_ENV === "production" ? "error" : "off",
+		"no-debugger": process.env.NODE_ENV === "production" ? "error" : "off",
+		"no-constant-condition": "off",
+		"prettier/prettier": ["error", { "useTabs": true, "printWidth": 140, "trailingComma": "es5" }],
+	},
   parserOptions: {
     parser: "@typescript-eslint/parser"
   },
