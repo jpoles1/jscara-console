@@ -1,7 +1,7 @@
 <template>
 	<v-app dark>
 		<Header />
-		<v-content>
+		<v-content style="margin-top: 20px;">
 			<router-view></router-view>
 		</v-content>
 		<Footer />
