@@ -5,7 +5,7 @@
 			<code>#enable-experimental-web-platform-features</code> flag in
 			<code>chrome://flags</code>
 		</div>
-		<div v-if="reader === undefined">
+		<div v-if="reader === undefined || output_stream === undefined">
 			<v-btn @click="serial_connect">
 				Connect to SCARA
 			</v-btn>
@@ -18,9 +18,29 @@
 				Send
 			</v-btn>
 		</div>
+		<div  v-if="!(reader === undefined || output_stream === undefined)">
+			<v-btn @click="home_scara" style="transform: scale(0.85);">
+				Origin
+			</v-btn>
+			<v-btn @click="write_serial('G92 X0 Y0\n')" style="transform: scale(0.85);">
+				XY=0
+			</v-btn>
+			<v-btn @click="write_serial('G92 Z0\n')" style="transform: scale(0.85);">
+				Z=0
+			</v-btn>
+			<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
+				XYZ=0
+			</v-btn>
+			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
+			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
+		</div>
 		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
+        <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" v-if="!(reader === undefined || output_stream === undefined)"/>
+		<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+			Send Converted GCODE
+		</v-btn>
 	</div>
 </template>
 
@@ -29,10 +49,13 @@
 //https://codelabs.developers.google.com/codelabs/web-serial/
 
 import Vue from "vue";
+import {ScaraConverter} from "@/ScaraConverter";
 
 export default Vue.extend({
 	data() {
 		return {
+			converted_gcode: [] as string[],
+			scara_conv: new ScaraConverter(),
 			send_log: [] as string[],
 			send_log_index: 0,
 			serial_log: [] as string[],
@@ -42,6 +65,17 @@ export default Vue.extend({
 		};
 	},
 	methods: {
+		async home_scara() {
+			const home_cmd_lines = [
+				"G0 Z10",
+				"G0 X0 Y0",
+				"G0 Z0",
+			];
+			for (const gcode_line_index in home_cmd_lines) {
+				const gcode_line = home_cmd_lines[gcode_line_index]
+				await this.write_serial(gcode_line + "\n");
+			}
+		},
 		recover_prev_cmd(inc: number) {
 			if (this.cmd == this.send_log[this.send_log_index]) {
 				this.send_log_index += inc;
@@ -99,6 +133,21 @@ export default Vue.extend({
 			this.reader = inputStream.getReader();
 			this.read_serial();
 		},
+		load_gcode_file(file: File) {
+			console.log(file)
+			if (file === null) return
+            const reader = new FileReader();
+            reader.onload = (ev: any) => {
+                this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(ev.target!.result).split("\n");
+			};
+            reader.readAsText(file);
+		},
+		async send_converted_gcode() {
+			for (const gcode_line_index in this.converted_gcode) {
+				const gcode_line = this.converted_gcode[gcode_line_index]
+				await this.write_serial(gcode_line + "\n");
+			}
+		}
 	},
 	mounted() {
 		console.log((navigator as any).serial !== undefined);
