@@ -1,5 +1,5 @@
 <template>
-	<div id="serial-pane">
+	<div id="serial-pane" style="margin-left: 24px;">
 		<div id="notSupported">
 			Sorry, <b>Web Serial</b> is not supported on this device, make sure you're running Chrome 78 or later and have enabled the
 			<code>#enable-experimental-web-platform-features</code> flag in
@@ -11,12 +11,14 @@
 			</v-btn>
 		</div>
 		<div v-else style="display: flex; align-items: center;">
-			<v-text-field label="GCODE Command" v-model="cmd" outlined style="max-width: 500px; margin-right: 30px;"/> 
+			<v-text-field label="GCODE Command" v-model="cmd" outlined style="max-width: 500px; margin-right: 30px;" 
+			autocomplete="off"
+			@keyup.enter.native="write_cmd_to_serial"  @keyup.up.native="recover_prev_cmd(1)" @keyup.down.native="recover_prev_cmd(-1)"/> 
 			<v-btn @click="write_cmd_to_serial" style="transform: scale(1.2);">
 				Send
 			</v-btn>
 		</div>
-		<div style="height: 600px; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
+		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
 	</div>
@@ -31,6 +33,8 @@ import Vue from "vue";
 export default Vue.extend({
 	data() {
 		return {
+			send_log: [] as string[],
+			send_log_index: 0,
 			serial_log: [] as string[],
 			cmd: "",
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
@@ -38,6 +42,17 @@ export default Vue.extend({
 		};
 	},
 	methods: {
+		recover_prev_cmd(inc: number) {
+			if (this.cmd == this.send_log[this.send_log_index]) {
+				this.send_log_index += inc;
+				if (this.send_log_index < this.send_log.length) {
+					this.cmd = this.send_log[this.send_log_index];
+				}
+			} else if (this.send_log.length > 0) {
+				this.send_log_index = 0;
+				this.cmd = this.send_log[this.send_log_index];
+			}
+		},
 		async read_serial() {
 			if (this.reader === undefined) return;
 			while (true) {
@@ -55,6 +70,7 @@ export default Vue.extend({
 		},
 		async write_cmd_to_serial() {
 			await this.write_serial(this.cmd + "\n");
+			this.send_log.unshift(this.cmd);
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
@@ -65,7 +81,7 @@ export default Vue.extend({
 			}
 			const writer = this.output_stream.getWriter();
 			await writer.write(data);
-			await writer.close();
+			await writer.releaseLock();
 			console.log("written");
 		},
 		async serial_connect() {
