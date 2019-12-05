@@ -54,10 +54,12 @@ import {ScaraConverter} from "@/ScaraConverter";
 export default Vue.extend({
 	data() {
 		return {
+			send_buffer: [] as string[],
 			converted_gcode: [] as string[],
 			scara_conv: new ScaraConverter(),
 			send_log: [] as string[],
 			send_log_index: 0,
+			recv_buffer: "",
 			serial_log: [] as string[],
 			cmd: "",
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
@@ -92,8 +94,15 @@ export default Vue.extend({
 			while (true) {
 				let { value, done } = await this.reader.read();
 				if (value) {
-					value = value.replace("\n", "<br>")
-					this.serial_log.push(value);
+					this.recv_buffer += value;
+					if (this.recv_buffer.includes("\n")){
+						if(this.send_buffer.length > 0 && (this.recv_buffer.includes("ok") || this.recv_buffer.includes("error:"))) {
+							this.write_serial(this.send_buffer.shift() + "\n");
+						}
+						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
+						this.serial_log.push(this.recv_buffer);
+						this.recv_buffer = "";
+					}
 				}
 				if (done) {
 					console.log("[readLoop] DONE", done);
@@ -121,7 +130,9 @@ export default Vue.extend({
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudrate: 9600 });
+			await port.open({ baudrate: 9600 }).catch((e) => {
+				this.$toast(`Failed to open serial connection: ${e}`)
+			});
 			// Setup Writer
 			const encoder = new TextEncoderStream();
 			const outputDone = encoder.readable.pipeTo(port.writable);
@@ -143,10 +154,8 @@ export default Vue.extend({
             reader.readAsText(file);
 		},
 		async send_converted_gcode() {
-			for (const gcode_line_index in this.converted_gcode) {
-				const gcode_line = this.converted_gcode[gcode_line_index]
-				await this.write_serial(gcode_line + "\n");
-			}
+			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
+			this.write_serial(this.send_buffer.shift() + "\n");
 		}
 	},
 	mounted() {

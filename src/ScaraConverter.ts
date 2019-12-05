@@ -32,7 +32,7 @@ export class ScaraConverter {
         this.x_offset = 80;
         this.y_offset = 80;
         this.skew =  0;
-        this.feed_rate = 100;
+        this.feed_rate = 1000;
         this.right_handed=  true;
         this.L1 = 100;
         this.L2 = 80;
@@ -146,13 +146,12 @@ export class ScaraConverter {
                 if (isNaN(next_pos.F!)) next_pos.F = current_pos.F;
 
                 if (next_pos.X === current_pos.X && next_pos.Y === current_pos.Y && next_pos.Z === current_pos.Z) {
-                    console.log(next_pos, current_pos);
-                    cmd_list.push(`G1 F${this.feed_rate} ;retract`)
+                    //cmd_list.push(`G1 F${this.feed_rate} (retract)`)
                     return [cmd_list, next_pos];
                 } else {
                     if (rapid) {
                         const scara_pos = this.map_cartesian_to_scara(this.translate(next_pos));
-                        cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate} (rapid move)`)
+                        cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate} (rapid move)`)
                         return [cmd_list, next_pos]; 
                     } else {
                         const scara_pos_segs = this.segmentize_cartesian_to_scara(this.translate(current_pos), this.translate(next_pos))
@@ -187,7 +186,7 @@ export class ScaraConverter {
     };
     convert_cartesian_to_scara(gcode_string: string): string {
         let gcode_lines = gcode_string.split("\n");
-        let current_pos: EffectorPos = {X: 0, Y: 0, Z: 0, E: 0, F: this.feed_rate};
+        let current_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: this.feed_rate};
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
             console.log("Current:", current_pos);
