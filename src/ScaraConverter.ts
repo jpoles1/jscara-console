@@ -1,4 +1,4 @@
-interface EffectorPos {
+export interface EffectorPos {
     X?: number,
     Y?: number,
     Z?: number,
@@ -6,19 +6,14 @@ interface EffectorPos {
     E?: number,
 }
 
-interface ScaraPos {
+export interface ScaraPos {
     a1: number,
     a2: number,
     Z: number,
     E: number,
 }
 
-export class ScaraConverter {
-    x_offset: number;
-    y_offset: number;
-    skew: number;
-    feed_rate: number;
-    right_handed: boolean;
+export interface ScaraProps {
     L1: number;
     L2: number;
     a1_driver_teeth: number;
@@ -27,23 +22,35 @@ export class ScaraConverter {
     a2_driver_teeth: number;
     a2_receiver_teeth: number;
     a2_steps_per_rev: number;
+}
+
+export const scara_default_props: ScaraProps = {
+    L1: 100,
+    L2: 100,
+    a1_driver_teeth: 20,
+    a1_receiver_teeth: 36,
+    a1_steps_per_rev: 800,
+    a2_driver_teeth: 20,
+    a2_receiver_teeth: 36,
+    a2_steps_per_rev: 800,
+}  
+
+export class ScaraConverter {
+    x_offset: number;
+    y_offset: number;
+    skew: number;
+    feed_rate: number;
+    right_handed: boolean;
     max_seg_length: number;
+    scara_props: ScaraProps;
     constructor() {
         this.x_offset = 80;
         this.y_offset = 80;
         this.skew =  0;
         this.feed_rate = 1000;
         this.right_handed=  true;
-        this.L1 = 100;
-        this.L2 = 80;
-        this.a1_driver_teeth = 20;
-        this.a1_receiver_teeth = 36;
-        this.a1_steps_per_rev = 200;
-        this.a2_driver_teeth = 20;
-        this.a2_receiver_teeth = 36;
-        this.a2_steps_per_rev = 200;
-        this. max_seg_length = 0.5;
-
+        this.max_seg_length = 0.5;
+        this.scara_props = scara_default_props;
     }
     parse_gcode_move(gcode_cmd: string[]): EffectorPos {
         console.log(gcode_cmd)
@@ -74,9 +81,9 @@ export class ScaraConverter {
     map_cartesian_to_scara(next_pos: EffectorPos, right_handed: boolean = true): ScaraPos {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
-        const beta = Math.acos((R**2-(this.L1**2)-(this.L2**2))/(-2*this.L1*this.L2))
+        const beta = Math.acos((R**2-(this.scara_props.L1**2)-(this.scara_props.L2**2))/(-2*this.scara_props.L1*this.scara_props.L2))
         const psi = Math.PI-beta
-        const alpha = Math.asin((this.L2*Math.sin(psi))/R)
+        const alpha = Math.asin((this.scara_props.L2*Math.sin(psi))/R)
 
         const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
         if (right_handed) {
@@ -87,8 +94,8 @@ export class ScaraConverter {
             scara_pos.a1 = (gamma+alpha) * 180 / Math.PI;
             scara_pos.a2 = (beta - Math.PI) * 180 / Math.PI;
         }            
-        scara_pos.a1 = parseFloat(scara_pos.a1.toPrecision(4));
-        scara_pos.a2 = parseFloat(scara_pos.a2.toPrecision(4));
+        scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(4));
+        scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(4));
         scara_pos.Z = next_pos.Z!;
         scara_pos.E = next_pos.E!;
         return scara_pos;
@@ -187,12 +194,17 @@ export class ScaraConverter {
     convert_cartesian_to_scara(gcode_string: string): string {
         let gcode_lines = gcode_string.split("\n");
         let current_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: this.feed_rate};
+        // GRBL 0.8c compatible GCODES for setting steps such that each full step is the equivalent of 1 degree!
+        let init_gcode =  [
+            `$0 = ${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
+            `$1 = ${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) }`
+        ];
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
             console.log("Current:", current_pos);
             [cmd_list, current_pos] = this.plot_scara_move(next_cmd, current_pos);
             return agg.concat(cmd_list);
-        }, []);//[`$0 = ${ (this.a1_steps_per_rev/360) * (this.a1_receiver_teeth/this.a1_driver_teeth) }`, `$1 = ${ (this.a2_steps_per_rev/360) * (this.a2_receiver_teeth/this.a2_driver_teeth) }`] as string[])
+        }, []);
         console.log(converted_gcode);
         return converted_gcode.join("\n");
     };

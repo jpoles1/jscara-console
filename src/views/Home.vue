@@ -69,9 +69,9 @@ export default Vue.extend({
 	methods: {
 		async home_scara() {
 			const home_cmd_lines = [
-				"G0 Z10",
-				"G0 X0 Y0",
-				"G0 Z0",
+				"G1 Z10 F1200",
+				"G1 X0 Y0 F1200",
+				"G1 Z0 F1200",
 			];
 			for (const gcode_line_index in home_cmd_lines) {
 				const gcode_line = home_cmd_lines[gcode_line_index]
@@ -110,6 +110,9 @@ export default Vue.extend({
 					break;
 				}
 			}
+		},
+		async write_next_in_buffer_to_serial() {
+
 		},
 		async write_cmd_to_serial() {
 			await this.write_serial(this.cmd + "\n");
