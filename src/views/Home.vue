@@ -33,6 +33,7 @@
 			</v-btn>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
+			Working Area: {{work_area_dim}} x {{work_area_dim}}
 		</div>
 		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
@@ -40,6 +41,12 @@
         <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" v-if="!(reader === undefined || output_stream === undefined)"/>
 		<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
 			Send Converted GCODE
+		</v-btn>
+		<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+			Regen SCARA GCODE
+		</v-btn>
+		<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+			Unclog Stuck Buffer
 		</v-btn>
 	</div>
 </template>
@@ -54,7 +61,10 @@ import {ScaraConverter} from "@/ScaraConverter";
 export default Vue.extend({
 	data() {
 		return {
+			raw_gcode: "",
 			send_buffer: [] as string[],
+			last_resp: undefined as number | undefined,
+			send_buffer_interval: undefined as any,
 			converted_gcode: [] as string[],
 			scara_conv: new ScaraConverter(),
 			send_log: [] as string[],
@@ -69,9 +79,9 @@ export default Vue.extend({
 	methods: {
 		async home_scara() {
 			const home_cmd_lines = [
-				"G1 Z10 F1200",
-				"G1 X0 Y0 F1200",
-				"G1 Z0 F1200",
+				"G1 Z10 F5000",
+				"G1 X0 Y0 F5000",
+				"G1 Z0 F5000",
 			];
 			for (const gcode_line_index in home_cmd_lines) {
 				const gcode_line = home_cmd_lines[gcode_line_index]
@@ -97,7 +107,8 @@ export default Vue.extend({
 					this.recv_buffer += value;
 					if (this.recv_buffer.includes("\n")){
 						if(this.send_buffer.length > 0 && (this.recv_buffer.includes("ok") || this.recv_buffer.includes("error:"))) {
-							this.write_serial(this.send_buffer.shift() + "\n");
+							this.last_resp = Date.now();
+							this.write_next_in_buffer_to_serial();
 						}
 						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
 						this.serial_log.push(this.recv_buffer);
@@ -112,7 +123,7 @@ export default Vue.extend({
 			}
 		},
 		async write_next_in_buffer_to_serial() {
-
+			this.write_serial(this.send_buffer.shift() + "\n");
 		},
 		async write_cmd_to_serial() {
 			await this.write_serial(this.cmd + "\n");
@@ -133,13 +144,18 @@ export default Vue.extend({
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudrate: 9600 }).catch((e) => {
+			await port.open({ baudrate: 115200 }).catch((e) => {
 				this.$toast(`Failed to open serial connection: ${e}`)
 			});
 			// Setup Writer
 			const encoder = new TextEncoderStream();
 			const outputDone = encoder.readable.pipeTo(port.writable);
 			this.output_stream = encoder.writable;
+			this.send_buffer_interval = setInterval(() => {
+				if (this.send_buffer.length > 0 && ((Date.now() - (this.last_resp || 0)) / 1000 > 2)) {
+					this.write_serial("?\n");
+				}
+			}, 4000);
 			// Setup Reader 
 			let decoder = new TextDecoderStream();
 			const inputDone = port.readable.pipeTo(decoder.writable);
@@ -147,19 +163,30 @@ export default Vue.extend({
 			this.reader = inputStream.getReader();
 			this.read_serial();
 		},
+		regen_converted_gcode() {
+			this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
+		},
 		load_gcode_file(file: File) {
 			console.log(file)
 			if (file === null) return
             const reader = new FileReader();
             reader.onload = (ev: any) => {
-                this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(ev.target!.result).split("\n");
+				this.raw_gcode = ev.target!.result;
+				this.regen_converted_gcode();
 			};
             reader.readAsText(file);
 		},
 		async send_converted_gcode() {
 			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
-			this.write_serial(this.send_buffer.shift() + "\n");
+			this.write_next_in_buffer_to_serial();
 		}
+	},
+	computed: {
+		work_area_dim(): number {
+			const R = this.scara_conv.inner_rad
+			const L = this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2
+			return parseFloat(((-R + Math.sqrt(2 * L**2 - R**2))/2).toFixed(0));
+		},
 	},
 	mounted() {
 		console.log((navigator as any).serial !== undefined);
