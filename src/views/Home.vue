@@ -106,9 +106,13 @@ export default Vue.extend({
 				if (value) {
 					this.recv_buffer += value;
 					if (this.recv_buffer.includes("\n")){
-						if(this.send_buffer.length > 0 && (this.recv_buffer.includes("ok") || this.recv_buffer.includes("error:"))) {
+						if(this.recv_buffer.includes("ok")) {
 							this.last_resp = Date.now();
-							this.write_next_in_buffer_to_serial();
+							if(this.send_buffer.length > 0) {
+								this.write_next_in_buffer_to_serial();
+							}
+						} else if (this.recv_buffer.includes("error:")) {
+						
 						}
 						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
 						this.serial_log.push(this.recv_buffer);
@@ -152,10 +156,10 @@ export default Vue.extend({
 			const outputDone = encoder.readable.pipeTo(port.writable);
 			this.output_stream = encoder.writable;
 			this.send_buffer_interval = setInterval(() => {
-				if (this.send_buffer.length > 0 && ((Date.now() - (this.last_resp || 0)) / 1000 > 2)) {
+				if (this.send_buffer.length > 0 && ((Date.now() - (this.last_resp || 0)) / 1000 > 1)) {
 					this.write_serial("?\n");
 				}
-			}, 4000);
+			}, 500);
 			// Setup Reader 
 			let decoder = new TextDecoderStream();
 			const inputDone = port.readable.pipeTo(decoder.writable);
