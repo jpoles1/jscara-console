@@ -144,7 +144,7 @@ export default Vue.extend({
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudrate: 115200 }).catch((e) => {
+			await port.open({ baudrate: 250000 }).catch((e) => {
 				this.$toast(`Failed to open serial connection: ${e}`)
 			});
 			// Setup Writer

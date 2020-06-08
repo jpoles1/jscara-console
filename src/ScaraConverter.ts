@@ -23,18 +23,20 @@ export interface ScaraProps {
     a1_steps_per_rev: number;
     a2_driver_teeth: number;
     a2_receiver_teeth: number;
+    a2_secondary_receiver_teeth: number;
     a2_steps_per_rev: number;
     max_speed: number;
 }
 
 export const scara_default_props: ScaraProps = {
-    L1: 100,
-    L2: 100,
+    L1: 120,
+    L2: 120,
     a1_driver_teeth: 20,
-    a1_receiver_teeth: 36,
+    a1_receiver_teeth: 80,
     a1_steps_per_rev: 800,
     a2_driver_teeth: 20,
-    a2_receiver_teeth: 36,
+    a2_receiver_teeth: 80,
+    a2_secondary_receiver_teeth: 108,
     a2_steps_per_rev: 800,
     max_speed: 4000,
 }  
@@ -49,8 +51,8 @@ export class ScaraConverter {
     max_seg_length: number;
     scara_props: ScaraProps;
     constructor() {
-        this.x_offset = 20;
-        this.y_offset = 0;
+        this.x_offset = 40;
+        this.y_offset = 40;
         this.inner_rad = 70;
         this.skew =  0;
         this.feed_rate = 1000;
@@ -229,8 +231,8 @@ export class ScaraConverter {
         let current_pos: EffectorPos = {X: undefined, Y: undefined, Z: 0, F: this.feed_rate};
         // GRBL 0.8c compatible GCODES for setting steps such that each full step is the equivalent of 1 degree!
         let init_gcode =  [
-            `$0 = ${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
-            `$1 = ${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) }`
+            `M92 X${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
+            `M92 Y${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) * (this.scara_props.a2_secondary_receiver_teeth/this.scara_props.a2_receiver_teeth) }`
         ];
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
