@@ -31,6 +31,35 @@
 			<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
 				XYZ=0
 			</v-btn>
+			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
+				Release Steppers
+			</v-btn>
+			<div class="jog-box">
+				<div class="jog-col">
+					<v-btn @click="write_serial('G91\nG0 X10\nG90\n')" class="jog-btn">
+						+X
+					</v-btn>
+					<v-btn @click="write_serial('G91\nG0 X-10\nG90\n')" class="jog-btn">
+						-X
+					</v-btn>
+				</div>
+				<div class="jog-col">
+					<v-btn @click="write_serial('G91\nG0 Y10\nG90\n')" class="jog-btn">
+						+Y
+					</v-btn>
+					<v-btn @click="write_serial('G91\nG0 Y-10\nG90\n')" class="jog-btn">
+						-Y
+					</v-btn>
+				</div>
+				<div class="jog-col">
+					<v-btn @click="write_serial('G91\nG0 Z10\nG90\n')" class="jog-btn">
+						+Z
+					</v-btn>
+					<v-btn @click="write_serial('G91\nG0 Z-10\nG90\n')" class="jog-btn">
+						-Z
+					</v-btn>
+				</div>
+			</div>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
 			Working Area: {{work_area_dim}} x {{work_area_dim}}
@@ -205,6 +234,26 @@ export default Vue.extend({
 </script>
 
 <style scoped>
+	.jog-box {
+		display: flex;
+		align-items: center;
+		background-color: lightblue;
+		width: 200px;
+		justify-content: center;
+		padding: 16px 0;
+		border-radius: 10px;
+		margin: 10px 0;
+	}
+	.jog-col {
+		display: flex;
+		flex-direction: column;
+	}
+	.jog-btn {
+		transform: scale(0.85);
+		min-width: 0;
+		font-weight: bold;
+		font-size: 150%;
+	}
 	#serial-pane >>> .v-text-field__details {
 		display: none;
 	}
