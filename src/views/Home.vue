@@ -48,6 +48,9 @@
 		<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
 			Unclog Stuck Buffer
 		</v-btn>
+		<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+			Clear Buffer
+		</v-btn>
 	</div>
 </template>
 
@@ -175,6 +178,9 @@ export default Vue.extend({
 				this.regen_converted_gcode();
 			};
             reader.readAsText(file);
+		},
+		clear_buffer() {
+			this.send_buffer = [];
 		},
 		async send_converted_gcode() {
 			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
