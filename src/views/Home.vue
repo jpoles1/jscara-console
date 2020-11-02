@@ -36,26 +36,29 @@
 			</v-btn>
 			<div class="jog-box">
 				<div class="jog-col">
-					<v-btn @click="write_serial('G91\nG0 X10\nG90\n')" class="jog-btn">
+					<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
+					<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
 						+X
 					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 X-10\nG90\n')" class="jog-btn">
+					<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
 						-X
 					</v-btn>
 				</div>
 				<div class="jog-col">
-					<v-btn @click="write_serial('G91\nG0 Y10\nG90\n')" class="jog-btn">
+					<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
+					<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
 						+Y
 					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 Y-10\nG90\n')" class="jog-btn">
+					<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
 						-Y
 					</v-btn>
 				</div>
 				<div class="jog-col">
-					<v-btn @click="write_serial('G91\nG0 Z10\nG90\n')" class="jog-btn">
+					<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
+					<v-btn @click="write_serial('G91\nG0 Z' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
 						+Z
 					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 Z-10\nG90\n')" class="jog-btn">
+					<v-btn @click="write_serial('G91\nG0 Z-' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
 						-Z
 					</v-btn>
 				</div>
@@ -104,6 +107,7 @@ export default Vue.extend({
 			recv_buffer: "",
 			serial_log: [] as string[],
 			cmd: "",
+			jog_inc: {x: 10, y: 10, z: 10},
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
 			output_stream: undefined as WritableStream<any> | undefined,
 		};
@@ -247,6 +251,9 @@ export default Vue.extend({
 	.jog-col {
 		display: flex;
 		flex-direction: column;
+	}
+	.jog-col input {
+		text-align: center;
 	}
 	.jog-btn {
 		transform: scale(0.85);
