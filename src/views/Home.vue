@@ -70,7 +70,7 @@
 		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
-        <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" v-if="!(reader === undefined || output_stream === undefined)"/>
+        <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
 		<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
 			Send Converted GCODE
 		</v-btn>
@@ -83,6 +83,17 @@
 		<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 			Clear Buffer
 		</v-btn>
+		<br>
+		<v-expansion-panels>
+			<v-expansion-panel>
+				<v-expansion-panel-header>
+					SCARA Sim
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<ScaraSim3D :uploaded_gcode="this.raw_gcode" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+		</v-expansion-panels>
 	</div>
 </template>
 
@@ -92,8 +103,12 @@
 
 import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
+import ScaraSim3D from "@/components/ScaraSim3D.vue";
 
 export default Vue.extend({
+	components: {
+		ScaraSim3D
+	},
 	data() {
 		return {
 			raw_gcode: "",
@@ -180,7 +195,7 @@ export default Vue.extend({
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudRate: 250000 }).catch((e) => {
+			await port.open({ baudRate: 250000 }).catch((e: any) => {
 				this.$toast(`Failed to open serial connection: ${e}`)
 			});
 			// Setup Writer

@@ -7,6 +7,19 @@ import vuetify from "./plugins/vuetify";
 
 Vue.config.productionTip = false;
 
+Vue.config.ignoredElements = [
+	'a-scene',
+	'a-assets',
+	'a-sky',
+	'a-camera',
+	'a-cursor',
+	'a-animation',
+	'a-entity',
+	'a-box',
+	'a-cylinder',
+	'a-plane'
+]
+
 new Vue({
 	router,
 	store,

@@ -1,5 +1,4 @@
 const gcodeParser = require('gcode-parser');
-console.log(gcodeParser)
 export interface EffectorPos {
     X?: number,
     Y?: number,
@@ -61,7 +60,6 @@ export class ScaraConverter {
         this.scara_props = scara_default_props;
     }
     parse_gcode_move(gcode_cmd: any[][]): EffectorPos {
-        console.log(gcode_cmd)
         let move_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: undefined, E: undefined};
         for (const gcode_seg_index in gcode_cmd) {
             const gcode_seg = gcode_cmd[gcode_seg_index];
@@ -87,13 +85,11 @@ export class ScaraConverter {
         return Math.sqrt((end.a1-start.a1)**2+(end.a2-start.a2)**2+(end.Z-start.Z)**2);
     };
     map_cartesian_to_scara(next_pos: EffectorPos, right_handed: boolean = true): ScaraPos {
-        console.log(next_pos);
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
         const handedness = this.right_handed ? -1 : 1
         
         const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
-        console.log((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*this.scara_props.L2)) 
         scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
         scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
         if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
@@ -143,13 +139,11 @@ export class ScaraConverter {
         }
     };
     segmentize_cartesian_to_scara(start: EffectorPos, end: EffectorPos): ScaraPos[] {
-        console.log(this.map_cartesian_to_scara(start), this.map_cartesian_to_scara(end));
         const l = this.scara_distance(this.map_cartesian_to_scara(start), this.map_cartesian_to_scara(end))
         if (l <= this.max_seg_length) {
             return [this.map_cartesian_to_scara(end)]; 
         } else {
             let n = Math.round(Math.ceil( l / this.max_seg_length))
-            console.log(n);
             return Array(n).fill(0).map((_: any, i: number) => {
                 return this.map_cartesian_to_scara(this.interpolate(start, end, i+1, n))
             });
@@ -236,11 +230,9 @@ export class ScaraConverter {
         ];
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
-            console.log("Current:", current_pos);
             [cmd_list, current_pos] = this.plot_scara_move(next_cmd, current_pos);
             return agg.concat(cmd_list);
         }, []);
-        console.log(converted_gcode);
         return converted_gcode.join("\n");
     };
 }
