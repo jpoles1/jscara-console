@@ -46,7 +46,7 @@ export default Vue.extend({
 	},
 	computed: {
 		navList(): any {
-			const navList = [];
+			const navList: any[] = [];
 			//navList.push({ name: "Genius", icon: "fa-user-cog", url: "/" });
 			return navList;
 		},
@@ -56,7 +56,7 @@ export default Vue.extend({
 
 <style scoped>
 .header-logo {
-	color: white;
+	color: #333;
 	transition: 0.6s;
 }
 .header-logo:hover {
