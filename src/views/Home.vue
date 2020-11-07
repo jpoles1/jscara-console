@@ -6,8 +6,11 @@
 			<code>chrome://flags</code>
 		</div>
 		<div v-if="reader === undefined || output_stream === undefined">
-			<v-btn @click="serial_connect">
+			<v-btn @click="serial_connect" v-if="!attempting_to_connect" color="primary">
 				Connect to SCARA
+			</v-btn>
+			<v-btn @click="cancel_connect = true" v-else color="error">
+				Cancel Connect to SCARA
 			</v-btn>
 		</div>
 		<div v-else style="display: flex; align-items: center;">
@@ -99,6 +102,8 @@
 
 <script lang="ts">
 
+const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 //https://codelabs.developers.google.com/codelabs/web-serial/
 
 import Vue from "vue";
@@ -123,6 +128,8 @@ export default Vue.extend({
 			serial_log: [] as string[],
 			cmd: "",
 			jog_inc: {x: 10, y: 10, z: 10},
+			attempting_to_connect: false,
+			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
 			output_stream: undefined as WritableStream<any> | undefined,
 		};
@@ -195,9 +202,25 @@ export default Vue.extend({
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudRate: 250000 }).catch((e: any) => {
-				this.$toast(`Failed to open serial connection: ${e}`)
-			});
+			let port_open_error = "" as any;
+			this.attempting_to_connect = true;
+			while (port_open_error != undefined) {
+				port_open_error = undefined;
+				await port.open({ baudRate: 250000 }).catch((e: any) => {
+					this.$toast(`Failed to open serial connection: ${e}`)
+					port_open_error = e;
+				});
+				if (this.cancel_connect) {
+					this.cancel_connect = false;
+					this.attempting_to_connect = false;
+					return;
+				}
+				if (port_open_error != undefined) {
+					await async_wait(1500);
+				}
+			}
+			// Connected successfully
+			this.attempting_to_connect = false;
 			// Setup Writer
 			const encoder = new TextEncoderStream();
 			const outputDone = encoder.readable.pipeTo(port.writable);
