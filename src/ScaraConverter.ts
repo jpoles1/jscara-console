@@ -54,7 +54,7 @@ export class ScaraConverter {
         this.y_offset = 10;
         this.inner_rad = 70;
         this.skew =  0;
-        this.feed_rate = 5000;
+        this.feed_rate = 2000;
         this.right_handed = false;
         this.max_seg_length = .5;
         this.scara_props = scara_default_props;
