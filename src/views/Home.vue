@@ -59,10 +59,10 @@
 					</div>
 					<div class="jog-col">
 						<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
-						<v-btn @click="write_serial('G91\nG0 Z' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
+						<v-btn @click="write_serial('G91\nG0 Z' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
 							+Z
 						</v-btn>
-						<v-btn @click="write_serial('G91\nG0 Z-' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
+						<v-btn @click="write_serial('G91\nG0 Z-' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
 							-Z
 						</v-btn>
 					</div>
