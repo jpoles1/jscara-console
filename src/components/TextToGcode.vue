@@ -52,15 +52,17 @@ export default Vue.extend({
                 } else {
                     const raw_path = font!.getPath(this.userText, 10, this.fontSize + 10, this.fontSize).toPathData(2);
                     const path_chunks = raw_path.split("Z") // Split on the "close path" cmd
-                    const lift_dist = 5; // # of mm to lift pen off page inbetween letters
+                    const lift_dist = 10; // # of mm to lift pen off page inbetween letters
                     let gcode = `G1Z${lift_dist}` // Start by lifting pen before moving to initial position
                     let lin_path = ""
                     path_chunks.forEach(chunk => {
                         const svgpath = SVGPath(chunk).unarc().abs();
                         let gcode_cmds = [] as string[]
                         let svg_cmds = [] as string[]
+                        let startpt = [undefined, undefined] as [number | undefined, number | undefined]
                         // Iterate over svg commands and convert to linearized versions of both GCode and SVG paths
                         let lineConsumer = (x1: number, y1: number, x2: number, y2: number, data: number) => {
+                            if(gcode_cmds.length == 0) startpt = [x2, y2]
                             gcode_cmds.push(`G1X${x2}Y${y2}`)
                             svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 * this.svgScaler} ${y2 * this.svgScaler}`)
                         }
@@ -68,6 +70,10 @@ export default Vue.extend({
                         svgpath.iterate(al.svgPathIterator);
                         // Place pen down on page at the start of each path
                         gcode_cmds.splice(1, 0, "G1Z0");
+                        if(startpt[0] !=undefined && startpt[1] != undefined) {
+                            // Move to start point to close path!
+                            gcode_cmds.push(`G1X${startpt[0]}Y${startpt[1]}`);
+                        }
                         // And then lift it when we are done
                         gcode_cmds.push(`G1Z${lift_dist}`)
                         // Join with \n and add to the overall gcode string
