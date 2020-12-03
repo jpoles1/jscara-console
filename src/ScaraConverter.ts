@@ -35,7 +35,7 @@ export const scara_default_props: ScaraProps = {
     a1_steps_per_rev: 800,
     a2_driver_teeth: 20,
     a2_receiver_teeth: 80,
-    a2_secondary_receiver_teeth: 108,
+    a2_secondary_receiver_teeth: 80,
     a2_steps_per_rev: 800,
     max_speed: 4000,
 }  
@@ -50,12 +50,12 @@ export class ScaraConverter {
     max_seg_length: number;
     scara_props: ScaraProps;
     constructor() {
-        this.x_offset = 40;
-        this.y_offset = 40;
+        this.x_offset = 0;
+        this.y_offset = 10;
         this.inner_rad = 70;
         this.skew =  0;
         this.feed_rate = 1000;
-        this.right_handed=  false;
+        this.right_handed = false;
         this.max_seg_length = .5;
         this.scara_props = scara_default_props;
     }
@@ -84,7 +84,7 @@ export class ScaraConverter {
     scara_distance(start: ScaraPos, end: ScaraPos): number {
         return Math.sqrt((end.a1-start.a1)**2+(end.a2-start.a2)**2+(end.Z-start.Z)**2);
     };
-    map_cartesian_to_scara(next_pos: EffectorPos, right_handed: boolean = true): ScaraPos {
+    map_cartesian_to_scara(next_pos: EffectorPos): ScaraPos {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
         const handedness = this.right_handed ? -1 : 1
