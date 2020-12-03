@@ -21,7 +21,7 @@
 				Send
 			</v-btn>
 		</div>
-		<div  v-if="!(reader === undefined || output_stream === undefined)">
+		<div v-if="!(reader === undefined || output_stream === undefined)">
 			<v-btn @click="home_scara" style="transform: scale(0.85);">
 				Origin
 			</v-btn>
@@ -37,33 +37,45 @@
 			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
 				Release Steppers
 			</v-btn>
-			<div class="jog-box">
-				<div class="jog-col">
-					<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
-					<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
-						+X
-					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
-						-X
-					</v-btn>
+			<div style="display: flex; align-items: stretch;">
+				<div class="jog-box">
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+							+X
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+							-X
+						</v-btn>
+					</div>
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+							+Y
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+							-Y
+						</v-btn>
+					</div>
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 Z' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
+							+Z
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 Z-' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
+							-Z
+						</v-btn>
+					</div>
 				</div>
-				<div class="jog-col">
-					<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
-					<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
-						+Y
-					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
-						-Y
-					</v-btn>
-				</div>
-				<div class="jog-col">
-					<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
-					<v-btn @click="write_serial('G91\nG0 Z' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
-						+Z
-					</v-btn>
-					<v-btn @click="write_serial('G91\nG0 Z-' + jog_inc['z'] + '\nG90\n')" class="jog-btn">
-						-Z
-					</v-btn>
+				<div style="width: 240px; margin: 10px 20px; padding: 16px 30px; background-color: #ffb8b8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-direction: column" >
+					<v-row>
+						<v-text-field type="number" v-model.number="goto.x" label="X Position" style="width: 100px;"/>
+						<div>&nbsp;&nbsp;&nbsp;</div>
+						<v-text-field type="number" v-model.number="goto.y" label="Y Position" style="width: 100px;"/>
+					</v-row>
+					<v-row justify="center">
+						<v-btn @click="goto_point">Go To</v-btn>
+					</v-row>
 				</div>
 			</div>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
@@ -128,6 +140,7 @@ export default Vue.extend({
 			serial_log: [] as string[],
 			cmd: "",
 			jog_inc: {x: 10, y: 10, z: 10},
+			goto: {x: 0, y: 20},
 			attempting_to_connect: false,
 			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
@@ -135,6 +148,11 @@ export default Vue.extend({
 		};
 	},
 	methods: {
+		async goto_point() {
+			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F5000\n`
+			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
+			await this.write_serial(scara_gcode + "\n");
+		},
 		async home_scara() {
 			const home_cmd_lines = [
 				"G1 Z10 F5000",
@@ -275,14 +293,14 @@ export default Vue.extend({
 });
 </script>
 
-<style scoped>
+<style>
 	.jog-box {
 		display: flex;
 		align-items: center;
 		background-color: lightblue;
-		width: 200px;
+		width: 240px;
 		justify-content: center;
-		padding: 16px 0;
+		padding: 16px;
 		border-radius: 10px;
 		margin: 10px 0;
 	}
@@ -299,7 +317,7 @@ export default Vue.extend({
 		font-weight: bold;
 		font-size: 150%;
 	}
-	#serial-pane >>> .v-text-field__details {
+	#serial-pane .v-text-field__details {
 		display: none;
 	}
 </style>
