@@ -6,3 +6,5 @@ declare module "*.vue" {
 declare module "vuetify/lib";
 
 declare module "gcode-parser";
+
+declare module "adaptive-linearization";

@@ -85,21 +85,49 @@
 		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
-        <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
-		<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
-			Send Converted GCODE
-		</v-btn>
-		<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
-			Regen SCARA GCODE
-		</v-btn>
-		<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
-			Unclog Stuck Buffer
-		</v-btn>
-		<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
-			Clear Buffer
-		</v-btn>
-		<br>
 		<v-expansion-panels>
+			<v-expansion-panel>
+				<v-expansion-panel-header color="#333">
+					Text2Scara
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<TextToGcode v-on:gcodegen="gcode_from_text"/>
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+			<v-expansion-panel>
+				<v-expansion-panel-header>
+					GCode Uploader
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
 			<v-expansion-panel>
 				<v-expansion-panel-header>
 					SCARA Sim
@@ -121,10 +149,12 @@ const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms
 import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
+import TextToGcode from "@/components/TextToGcode.vue";
 
 export default Vue.extend({
 	components: {
-		ScaraSim3D
+		ScaraSim3D,
+		TextToGcode,
 	},
 	data() {
 		return {
@@ -149,7 +179,7 @@ export default Vue.extend({
 	},
 	methods: {
 		async goto_point() {
-			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F5000\n`
+			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F50000\n`
 			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
 			await this.write_serial(scara_gcode + "\n");
 		},
@@ -268,6 +298,10 @@ export default Vue.extend({
 			};
             reader.readAsText(file);
 		},
+		gcode_from_text(gcode: string) {
+			this.raw_gcode = gcode;
+			this.regen_converted_gcode();
+		},
 		clear_buffer() {
 			this.send_buffer = [];
 		},
@@ -319,5 +353,9 @@ export default Vue.extend({
 	}
 	#serial-pane .v-text-field__details {
 		display: none;
+	}
+	.v-expansion-panel-content {
+		border-top: 1px solid #999;
+    	padding-top: 20px;
 	}
 </style>
