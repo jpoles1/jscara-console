@@ -88,10 +88,9 @@ export class ScaraConverter {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
         const handedness = this.right_handed ? -1 : 1
-        
         const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
-        scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
-        scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
+        scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
+        scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
         if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
             console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos);
             if (alert) {
