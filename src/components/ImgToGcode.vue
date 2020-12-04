@@ -56,7 +56,6 @@ export default Vue.extend({
     },
     methods: {
         load_img_file(file: File) {
-            console.log(file)
             if (file === null) return
             const reader = new FileReader();
             if(["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
@@ -81,7 +80,6 @@ export default Vue.extend({
             if(this.rawPhoto != undefined) {
                 potrace.trace(this.rawPhoto, this.potraceParams, (err: Error, svg: string) => {
                     if (err) throw err;
-                    console.log(svg)
                     this.rawSVG = svg;
                     this.svgToGcode();
                 });
@@ -94,7 +92,6 @@ export default Vue.extend({
                 agg.push(rawPath!);
                 return agg;
             }, [] as string[])
-            console.log(path_chunks)
             const lift_dist = 5; // # of mm to lift pen off page inbetween letters
             let gcode = ""
             let lin_path = ""
@@ -136,7 +133,6 @@ export default Vue.extend({
                 lin_path = lin_path + " " + svg_cmds.join(" ")
             })
             // Display the SVG path as a preview
-            console.log(maxVals)
             //this.canvasWidth = maxVals[0]
             //this.canvasHeight = maxVals[1]
             // Clear out the canvas

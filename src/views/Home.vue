@@ -260,7 +260,6 @@ export default Vue.extend({
 					}
 				}
 				if (done) {
-					console.log("[readLoop] DONE", done);
 					this.reader.releaseLock();
 					break;
 				}
