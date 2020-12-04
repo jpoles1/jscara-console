@@ -22,8 +22,7 @@
 			</span>
 			<v-toolbar-title class="headline">
 				<router-link to="/" class="header-logo" style="text-decoration: none;">
-					<span>ABG</span>
-					<span class="font-weight-light">enius</span>
+					<span>JSCARA</span>
 				</router-link>
 			</v-toolbar-title>
 			<v-spacer v-if="$vuetify.breakpoint.smAndUp" />
@@ -47,17 +46,8 @@ export default Vue.extend({
 	},
 	computed: {
 		navList(): any {
-			const navList = [];
-			if (this.$route.path !== "/train") {
-				navList.push({
-					name: "Train",
-					icon: "fa-question-circle",
-					url: "/train",
-				});
-			}
-			if (this.$route.path !== "/") {
-				navList.push({ name: "Genius", icon: "fa-user-cog", url: "/" });
-			}
+			const navList: any[] = [];
+			//navList.push({ name: "Genius", icon: "fa-user-cog", url: "/" });
 			return navList;
 		},
 	},
@@ -66,7 +56,7 @@ export default Vue.extend({
 
 <style scoped>
 .header-logo {
-	color: white;
+	color: #333;
 	transition: 0.6s;
 }
 .header-logo:hover {

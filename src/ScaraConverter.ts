@@ -1,5 +1,4 @@
 const gcodeParser = require('gcode-parser');
-console.log(gcodeParser)
 export interface EffectorPos {
     X?: number,
     Y?: number,
@@ -23,18 +22,20 @@ export interface ScaraProps {
     a1_steps_per_rev: number;
     a2_driver_teeth: number;
     a2_receiver_teeth: number;
+    a2_secondary_receiver_teeth: number;
     a2_steps_per_rev: number;
     max_speed: number;
 }
 
 export const scara_default_props: ScaraProps = {
-    L1: 100,
-    L2: 100,
+    L1: 120,
+    L2: 120,
     a1_driver_teeth: 20,
-    a1_receiver_teeth: 36,
+    a1_receiver_teeth: 80,
     a1_steps_per_rev: 800,
     a2_driver_teeth: 20,
-    a2_receiver_teeth: 36,
+    a2_receiver_teeth: 80,
+    a2_secondary_receiver_teeth: 80,
     a2_steps_per_rev: 800,
     max_speed: 4000,
 }  
@@ -48,18 +49,19 @@ export class ScaraConverter {
     right_handed: boolean;
     max_seg_length: number;
     scara_props: ScaraProps;
-    constructor() {
-        this.x_offset = 20;
+    error_reporter: (e: string) => void;
+    constructor(error_reporter?: (e: string) => void) {
+        this.x_offset = 0;
         this.y_offset = 0;
-        this.inner_rad = 70;
+        this.inner_rad = 30;
         this.skew =  0;
-        this.feed_rate = 1000;
-        this.right_handed=  false;
+        this.feed_rate = 2000;
+        this.right_handed = false;
         this.max_seg_length = .5;
         this.scara_props = scara_default_props;
+        this.error_reporter = error_reporter || ((e) => {if (alert) { alert(e) } })
     }
     parse_gcode_move(gcode_cmd: any[][]): EffectorPos {
-        console.log(gcode_cmd)
         let move_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: undefined, E: undefined};
         for (const gcode_seg_index in gcode_cmd) {
             const gcode_seg = gcode_cmd[gcode_seg_index];
@@ -84,33 +86,26 @@ export class ScaraConverter {
     scara_distance(start: ScaraPos, end: ScaraPos): number {
         return Math.sqrt((end.a1-start.a1)**2+(end.a2-start.a2)**2+(end.Z-start.Z)**2);
     };
-    map_cartesian_to_scara(next_pos: EffectorPos, right_handed: boolean = true): ScaraPos {
-        console.log(next_pos);
+    map_cartesian_to_scara(next_pos: EffectorPos): ScaraPos {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
         const handedness = this.right_handed ? -1 : 1
-        
         const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
-        console.log((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*this.scara_props.L2)) 
-        scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
-        scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L1*this.scara_props.L2))) * 180 / Math.PI
+        scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
+        scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
         if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
             console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos);
-            if (alert) {
-                alert("ERROR: Conversion failed: GCODE results in NaNs!");
-            }
+            this.error_reporter("ERROR: Conversion failed: GCODE results in NaNs!");
             throw "ERROR: Conversion failed: GCODE results in NaNs!";
         }
         else if(scara_pos.a1 > 180 || scara_pos.a1 < 0 || scara_pos.a2 > 140 || scara_pos.a2 < -140) {
             console.log("ERROR: Conversion failed: GCODE falls outside useable work area!", next_pos, scara_pos);
-            if (alert) {
-                alert("ERROR: Conversion failed: GCODE falls outside useable work area!");
-            }
+            this.error_reporter("ERROR: Conversion failed: GCODE falls outside useable work area!");
             throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
         }
         // Round values
-        scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(6));
-        scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(6));
+        scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(2));
+        scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(2));
         scara_pos.Z = next_pos.Z!;
         scara_pos.E = next_pos.E!;
         return scara_pos;
@@ -141,13 +136,11 @@ export class ScaraConverter {
         }
     };
     segmentize_cartesian_to_scara(start: EffectorPos, end: EffectorPos): ScaraPos[] {
-        console.log(this.map_cartesian_to_scara(start), this.map_cartesian_to_scara(end));
         const l = this.scara_distance(this.map_cartesian_to_scara(start), this.map_cartesian_to_scara(end))
         if (l <= this.max_seg_length) {
             return [this.map_cartesian_to_scara(end)]; 
         } else {
             let n = Math.round(Math.ceil( l / this.max_seg_length))
-            console.log(n);
             return Array(n).fill(0).map((_: any, i: number) => {
                 return this.map_cartesian_to_scara(this.interpolate(start, end, i+1, n))
             });
@@ -158,8 +151,8 @@ export class ScaraConverter {
         const hyp = Math.hypot(pos.X!, pos.Y!);
         const hypAngle = Math.atan2(pos.Y!, pos.X!);
         const newHypAngle = hypAngle+ this.skew;
-        newPos.X = (Math.cos(newHypAngle)*hyp) + this.x_offset;
-        newPos.Y= (Math.sin(newHypAngle)*hyp) + this.y_offset;
+        newPos.X = pos.X! + this.x_offset;
+        newPos.Y= pos.Y! + this.y_offset;
         return newPos;
     };
     plot_scara_move(next_cmd_str: string, current_pos: EffectorPos): [string[], EffectorPos] {
@@ -187,9 +180,9 @@ export class ScaraConverter {
                     }
                     return [cmd_list, next_pos]; 
                 }
-                if (current_pos.X === undefined && current_pos.Y === undefined){
+                if ((current_pos.X === undefined && current_pos.Y === undefined) || rapid){
                     const scara_pos = this.map_cartesian_to_scara(this.translate(next_pos));
-                    cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate}`)
+                    cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate}`)
                     return [cmd_list, next_pos]; 
                 }
                 else {
@@ -229,16 +222,14 @@ export class ScaraConverter {
         let current_pos: EffectorPos = {X: undefined, Y: undefined, Z: 0, F: this.feed_rate};
         // GRBL 0.8c compatible GCODES for setting steps such that each full step is the equivalent of 1 degree!
         let init_gcode =  [
-            `$0 = ${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
-            `$1 = ${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) }`
+            `M92 X${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
+            `M92 Y${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) * (this.scara_props.a2_secondary_receiver_teeth/this.scara_props.a2_receiver_teeth) }`
         ];
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
-            console.log("Current:", current_pos);
             [cmd_list, current_pos] = this.plot_scara_move(next_cmd, current_pos);
             return agg.concat(cmd_list);
         }, []);
-        console.log(converted_gcode);
         return converted_gcode.join("\n");
     };
 }

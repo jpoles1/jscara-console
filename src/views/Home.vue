@@ -6,8 +6,11 @@
 			<code>chrome://flags</code>
 		</div>
 		<div v-if="reader === undefined || output_stream === undefined">
-			<v-btn @click="serial_connect">
+			<v-btn @click="serial_connect" v-if="!attempting_to_connect" color="primary">
 				Connect to SCARA
+			</v-btn>
+			<v-btn @click="cancel_connect = true" v-else color="error">
+				Cancel Connect to SCARA
 			</v-btn>
 		</div>
 		<div v-else style="display: flex; align-items: center;">
@@ -18,7 +21,7 @@
 				Send
 			</v-btn>
 		</div>
-		<div  v-if="!(reader === undefined || output_stream === undefined)">
+		<div v-if="!(reader === undefined || output_stream === undefined)">
 			<v-btn @click="home_scara" style="transform: scale(0.85);">
 				Origin
 			</v-btn>
@@ -31,6 +34,50 @@
 			<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
 				XYZ=0
 			</v-btn>
+			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
+				Release Steppers
+			</v-btn>
+			<div style="display: flex; align-items: stretch;">
+				<div class="jog-box">
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+							+X
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+							-X
+						</v-btn>
+					</div>
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+							+Y
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+							-Y
+						</v-btn>
+					</div>
+					<div class="jog-col">
+						<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
+						<v-btn @click="write_serial('G91\nG0 Z' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
+							+Z
+						</v-btn>
+						<v-btn @click="write_serial('G91\nG0 Z-' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
+							-Z
+						</v-btn>
+					</div>
+				</div>
+				<div style="width: 240px; margin: 10px 20px; padding: 16px 30px; background-color: #ffb8b8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-direction: column" >
+					<v-row>
+						<v-text-field type="number" v-model.number="goto.x" label="X Position" style="width: 100px;"/>
+						<div>&nbsp;&nbsp;&nbsp;</div>
+						<v-text-field type="number" v-model.number="goto.y" label="Y Position" style="width: 100px;"/>
+					</v-row>
+					<v-row justify="center">
+						<v-btn @click="goto_point">Go To</v-btn>
+					</v-row>
+				</div>
+			</div>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
 			Working Area: {{work_area_dim}} x {{work_area_dim}}
@@ -38,27 +85,104 @@
 		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
-        <v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" v-if="!(reader === undefined || output_stream === undefined)"/>
-		<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
-			Send Converted GCODE
-		</v-btn>
-		<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
-			Regen SCARA GCODE
-		</v-btn>
-		<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
-			Unclog Stuck Buffer
-		</v-btn>
+		<v-expansion-panels>
+			<v-expansion-panel>
+				<v-expansion-panel-header color="#333">
+					Text 🢂 SCARA
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<TextToGcode v-on:gcodegen="gcode_from_text"/>
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+			<v-expansion-panel>
+				<v-expansion-panel-header color="#333">
+					Image 🢂 SCARA	
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<ImgToGcode v-on:gcodegen="gcode_from_text"/>
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+					<v-btn @click="saveGcode(raw_gcode)" v-if="converted_gcode.length > 0">
+						Save Raw GCODE
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+			<v-expansion-panel>
+				<v-expansion-panel-header>
+					GCode Uploader
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+			<v-expansion-panel>
+				<v-expansion-panel-header>
+					SCARA Sim
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<ScaraSim3D :uploaded_gcode="this.raw_gcode" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+		</v-expansion-panels>
 	</div>
 </template>
 
 <script lang="ts">
 
+const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 //https://codelabs.developers.google.com/codelabs/web-serial/
 
 import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
+import ScaraSim3D from "@/components/ScaraSim3D.vue";
+import TextToGcode from "@/components/TextToGcode.vue";
+import ImgToGcode from "@/components/ImgToGcode.vue";
+import saveAs from "@/components/FileSaver"
 
 export default Vue.extend({
+	components: {
+		ScaraSim3D,
+		TextToGcode,
+		ImgToGcode,
+	},
 	data() {
 		return {
 			raw_gcode: "",
@@ -66,17 +190,37 @@ export default Vue.extend({
 			last_resp: undefined as number | undefined,
 			send_buffer_interval: undefined as any,
 			converted_gcode: [] as string[],
-			scara_conv: new ScaraConverter(),
+			scara_conv: new ScaraConverter((e: string) => {this.$toast(e, {x: "center", color: "red"})}),
 			send_log: [] as string[],
 			send_log_index: 0,
 			recv_buffer: "",
 			serial_log: [] as string[],
 			cmd: "",
+			jog_inc: {x: 10, y: 10, z: 10},
+			goto: {x: 0, y: 0},
+			attempting_to_connect: false,
+			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
 			output_stream: undefined as WritableStream<any> | undefined,
+			regen_debounce: 0,
 		};
 	},
+	watch: {
+		"scara_conv.x_offset"() {
+			clearTimeout(this.regen_debounce)
+			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
+		},
+		"scara_conv.y_offset"() {
+			clearTimeout(this.regen_debounce)
+			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
+		},
+	},
 	methods: {
+		async goto_point() {
+			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F50000\n`
+			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
+			await this.write_serial(scara_gcode + "\n");
+		},
 		async home_scara() {
 			const home_cmd_lines = [
 				"G1 Z10 F5000",
@@ -120,7 +264,6 @@ export default Vue.extend({
 					}
 				}
 				if (done) {
-					console.log("[readLoop] DONE", done);
 					this.reader.releaseLock();
 					break;
 				}
@@ -135,7 +278,7 @@ export default Vue.extend({
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
-			console.log(data, this.output_stream);
+			//console.log(data, this.output_stream);
 			if (this.output_stream === undefined) {
 				this.$toast("Failed to write to serial");
 				return;
@@ -143,14 +286,30 @@ export default Vue.extend({
 			const writer = this.output_stream.getWriter();
 			await writer.write(data);
 			await writer.releaseLock();
-			console.log("written");
+			//console.log("written");
 		},
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
 			// - Wait for the port to open.
-			await port.open({ baudrate: 115200 }).catch((e) => {
-				this.$toast(`Failed to open serial connection: ${e}`)
-			});
+			let port_open_error = "" as any;
+			this.attempting_to_connect = true;
+			while (port_open_error != undefined) {
+				port_open_error = undefined;
+				await port.open({ baudRate: 250000 }).catch((e: any) => {
+					this.$toast(`Failed to open serial connection: ${e}`)
+					port_open_error = e;
+				});
+				if (this.cancel_connect) {
+					this.cancel_connect = false;
+					this.attempting_to_connect = false;
+					return;
+				}
+				if (port_open_error != undefined) {
+					await async_wait(1500);
+				}
+			}
+			// Connected successfully
+			this.attempting_to_connect = false;
 			// Setup Writer
 			const encoder = new TextEncoderStream();
 			const outputDone = encoder.readable.pipeTo(port.writable);
@@ -171,7 +330,6 @@ export default Vue.extend({
 			this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
 		},
 		load_gcode_file(file: File) {
-			console.log(file)
 			if (file === null) return
             const reader = new FileReader();
             reader.onload = (ev: any) => {
@@ -179,6 +337,17 @@ export default Vue.extend({
 				this.regen_converted_gcode();
 			};
             reader.readAsText(file);
+		},
+		gcode_from_text(gcode: string) {
+			// Add homing seq to end of gcode
+			this.raw_gcode = gcode + ["G0Z10", `G0X${this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2}Y-${this.scara_conv.inner_rad}`, "G0Z0"].join("\n");
+			this.regen_converted_gcode();
+		},
+		saveGcode(gcode: string) {
+			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
+		},
+		clear_buffer() {
+			this.send_buffer = [];
 		},
 		async send_converted_gcode() {
 			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
@@ -193,7 +362,6 @@ export default Vue.extend({
 		},
 	},
 	mounted() {
-		console.log((navigator as any).serial !== undefined);
 		if ((navigator as any).serial !== undefined) {
 			const notSupported = document.getElementById("notSupported");
 			notSupported!.style.display = "none";
@@ -202,8 +370,35 @@ export default Vue.extend({
 });
 </script>
 
-<style scoped>
-	#serial-pane >>> .v-text-field__details {
+<style>
+	.jog-box {
+		display: flex;
+		align-items: center;
+		background-color: lightblue;
+		width: 240px;
+		justify-content: center;
+		padding: 16px;
+		border-radius: 10px;
+		margin: 10px 0;
+	}
+	.jog-col {
+		display: flex;
+		flex-direction: column;
+	}
+	.jog-col input {
+		text-align: center;
+	}
+	.jog-btn {
+		transform: scale(0.85);
+		min-width: 0;
+		font-weight: bold;
+		font-size: 150%;
+	}
+	#serial-pane .v-text-field__details {
 		display: none;
+	}
+	.v-expansion-panel-content {
+		border-top: 1px solid #999;
+    	padding-top: 20px;
 	}
 </style>
