@@ -1,7 +1,7 @@
 <template>
     <div>
         <div style="width: 300px; max-width: 100%">
-            <v-file-input @change="load_img_file" placeholder="Upload Image (svg, png, jpg)" />
+            <v-file-input @change="load_img_file" placeholder="Upload Image" accept=".svg,.png,.jpg,.jpeg"/>
         </div>
         <div v-show="imageSize[0] + imageSize[1] > 0">
             <div style="display: flex">
@@ -52,7 +52,7 @@ export default Vue.extend({
             console.log(file)
             if (file === null) return
             const reader = new FileReader();
-            if(["image/jpeg"].includes(file.type)) {
+            if(["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
                 reader.onload = (ev) => {
                     this.imageType = "photo"
                     this.rawPhoto = ev.target!.result as ArrayBuffer;
