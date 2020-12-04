@@ -88,10 +88,31 @@
 		<v-expansion-panels>
 			<v-expansion-panel>
 				<v-expansion-panel-header color="#333">
-					Text2Scara
+					Text 🢂 SCARA
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
 					<TextToGcode v-on:gcodegen="gcode_from_text"/>
+					<br>
+					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+						Send Converted GCODE
+					</v-btn>
+					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
+						Regen SCARA GCODE
+					</v-btn>
+					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
+						Unclog Stuck Buffer
+					</v-btn>
+					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
+						Clear Buffer
+					</v-btn>
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+			<v-expansion-panel>
+				<v-expansion-panel-header color="#333">
+					Image 🢂 SCARA	
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					<ImgToGcode v-on:gcodegen="gcode_from_text"/>
 					<br>
 					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
 						Send Converted GCODE
@@ -150,11 +171,13 @@ import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
 import TextToGcode from "@/components/TextToGcode.vue";
+import ImgToGcode from "@/components/ImgToGcode.vue";
 
 export default Vue.extend({
 	components: {
 		ScaraSim3D,
 		TextToGcode,
+		ImgToGcode,
 	},
 	data() {
 		return {
@@ -175,7 +198,18 @@ export default Vue.extend({
 			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
 			output_stream: undefined as WritableStream<any> | undefined,
+			regen_debounce: 0,
 		};
+	},
+	watch: {
+		"scara_conv.x_offset"() {
+			clearTimeout(this.regen_debounce)
+			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
+		},
+		"scara_conv.y_offset"() {
+			clearTimeout(this.regen_debounce)
+			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
+		},
 	},
 	methods: {
 		async goto_point() {

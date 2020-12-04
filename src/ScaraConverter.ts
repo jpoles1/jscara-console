@@ -51,8 +51,8 @@ export class ScaraConverter {
     scara_props: ScaraProps;
     constructor() {
         this.x_offset = 0;
-        this.y_offset = 10;
-        this.inner_rad = 70;
+        this.y_offset = 0;
+        this.inner_rad = 40;
         this.skew =  0;
         this.feed_rate = 2000;
         this.right_handed = false;
@@ -106,8 +106,8 @@ export class ScaraConverter {
             throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
         }
         // Round values
-        scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(6));
-        scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(6));
+        scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(2));
+        scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(2));
         scara_pos.Z = next_pos.Z!;
         scara_pos.E = next_pos.E!;
         return scara_pos;
@@ -153,8 +153,8 @@ export class ScaraConverter {
         const hyp = Math.hypot(pos.X!, pos.Y!);
         const hypAngle = Math.atan2(pos.Y!, pos.X!);
         const newHypAngle = hypAngle+ this.skew;
-        newPos.X = (Math.cos(newHypAngle)*hyp) + this.x_offset;
-        newPos.Y= (Math.sin(newHypAngle)*hyp) + this.y_offset;
+        newPos.X = pos.X! + this.x_offset;
+        newPos.Y= pos.Y! + this.y_offset;
         return newPos;
     };
     plot_scara_move(next_cmd_str: string, current_pos: EffectorPos): [string[], EffectorPos] {
@@ -182,9 +182,9 @@ export class ScaraConverter {
                     }
                     return [cmd_list, next_pos]; 
                 }
-                if (current_pos.X === undefined && current_pos.Y === undefined){
+                if ((current_pos.X === undefined && current_pos.Y === undefined) || rapid){
                     const scara_pos = this.map_cartesian_to_scara(this.translate(next_pos));
-                    cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate}`)
+                    cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate}`)
                     return [cmd_list, next_pos]; 
                 }
                 else {
