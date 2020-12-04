@@ -10,3 +10,5 @@ declare module "gcode-parser";
 declare module "adaptive-linearization";
 
 declare module "potrace";
+
+declare module "image-blob-reduce";

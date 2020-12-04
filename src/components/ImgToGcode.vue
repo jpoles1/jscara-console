@@ -35,6 +35,7 @@ import opentype from "opentype.js"
 import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/index.ts"
 import SVGPath from "svgpath"
 import potrace from "potrace"
+import imgreduce from "image-blob-reduce"
 
 import Vue from "vue"
 export default Vue.extend({
@@ -44,7 +45,7 @@ export default Vue.extend({
             rawPhoto: undefined as ArrayBuffer | undefined,
             rawSVG: "",
             imageType: "",
-            gcodeScale: 100,
+            gcodeScale: 25,
             potraceParams: {
                 threshold: -1,
                 turdSize: 15,
@@ -64,7 +65,7 @@ export default Vue.extend({
                     this.rawPhoto = ev.target!.result as ArrayBuffer;
                     this.photoToSVG();
                 };
-                reader.readAsArrayBuffer(file);
+                imgreduce().toBlob(file, {max: 400}).then(((reducedFile: File) => reader.readAsArrayBuffer(reducedFile)))
             }
             else if(file.type == "image/svg+xml") {
                 reader.onload = (ev: any) => {
