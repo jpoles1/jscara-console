@@ -126,6 +126,9 @@
 					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 						Clear Buffer
 					</v-btn>
+					<v-btn @click="saveGcode(raw_gcode)" v-if="converted_gcode.length > 0">
+						Save Raw GCODE
+					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 			<v-expansion-panel>
@@ -172,6 +175,7 @@ import {ScaraConverter} from "@/ScaraConverter";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
 import TextToGcode from "@/components/TextToGcode.vue";
 import ImgToGcode from "@/components/ImgToGcode.vue";
+import saveAs from "@/components/FileSaver"
 
 export default Vue.extend({
 	components: {
@@ -186,14 +190,14 @@ export default Vue.extend({
 			last_resp: undefined as number | undefined,
 			send_buffer_interval: undefined as any,
 			converted_gcode: [] as string[],
-			scara_conv: new ScaraConverter(),
+			scara_conv: new ScaraConverter((e: string) => {this.$toast(e, {x: "center", color: "red"})}),
 			send_log: [] as string[],
 			send_log_index: 0,
 			recv_buffer: "",
 			serial_log: [] as string[],
 			cmd: "",
 			jog_inc: {x: 10, y: 10, z: 10},
-			goto: {x: 0, y: 20},
+			goto: {x: 0, y: 0},
 			attempting_to_connect: false,
 			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
@@ -271,7 +275,7 @@ export default Vue.extend({
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
-			console.log(data, this.output_stream);
+			//console.log(data, this.output_stream);
 			if (this.output_stream === undefined) {
 				this.$toast("Failed to write to serial");
 				return;
@@ -279,7 +283,7 @@ export default Vue.extend({
 			const writer = this.output_stream.getWriter();
 			await writer.write(data);
 			await writer.releaseLock();
-			console.log("written");
+			//console.log("written");
 		},
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
@@ -323,7 +327,6 @@ export default Vue.extend({
 			this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
 		},
 		load_gcode_file(file: File) {
-			console.log(file)
 			if (file === null) return
             const reader = new FileReader();
             reader.onload = (ev: any) => {
@@ -335,6 +338,9 @@ export default Vue.extend({
 		gcode_from_text(gcode: string) {
 			this.raw_gcode = gcode;
 			this.regen_converted_gcode();
+		},
+		saveGcode(gcode: string) {
+			saveAs(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
 		},
 		clear_buffer() {
 			this.send_buffer = [];
@@ -352,7 +358,6 @@ export default Vue.extend({
 		},
 	},
 	mounted() {
-		console.log((navigator as any).serial !== undefined);
 		if ((navigator as any).serial !== undefined) {
 			const notSupported = document.getElementById("notSupported");
 			notSupported!.style.display = "none";

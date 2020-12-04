@@ -49,15 +49,17 @@ export class ScaraConverter {
     right_handed: boolean;
     max_seg_length: number;
     scara_props: ScaraProps;
-    constructor() {
+    error_reporter: (e: string) => void;
+    constructor(error_reporter?: (e: string) => void) {
         this.x_offset = 0;
         this.y_offset = 0;
-        this.inner_rad = 40;
+        this.inner_rad = 30;
         this.skew =  0;
         this.feed_rate = 2000;
         this.right_handed = false;
         this.max_seg_length = .5;
         this.scara_props = scara_default_props;
+        this.error_reporter = error_reporter || ((e) => {if (alert) { alert(e) } })
     }
     parse_gcode_move(gcode_cmd: any[][]): EffectorPos {
         let move_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: undefined, E: undefined};
@@ -93,16 +95,12 @@ export class ScaraConverter {
         scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
         if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
             console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos);
-            if (alert) {
-                alert("ERROR: Conversion failed: GCODE results in NaNs!");
-            }
+            this.error_reporter("ERROR: Conversion failed: GCODE results in NaNs!");
             throw "ERROR: Conversion failed: GCODE results in NaNs!";
         }
         else if(scara_pos.a1 > 180 || scara_pos.a1 < 0 || scara_pos.a2 > 140 || scara_pos.a2 < -140) {
             console.log("ERROR: Conversion failed: GCODE falls outside useable work area!", next_pos, scara_pos);
-            if (alert) {
-                alert("ERROR: Conversion failed: GCODE falls outside useable work area!");
-            }
+            this.error_reporter("ERROR: Conversion failed: GCODE falls outside useable work area!");
             throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
         }
         // Round values
