@@ -255,9 +255,8 @@ export default Vue.extend({
 							if(this.send_buffer.length > 0) {
 								this.write_next_in_buffer_to_serial();
 							}
-						} else if (this.recv_buffer.includes("error:")) {
-						
-						}
+						} 
+						// else if (this.recv_buffer.includes("error:")) {}
 						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
 						this.serial_log.push(this.recv_buffer);
 						this.recv_buffer = "";
