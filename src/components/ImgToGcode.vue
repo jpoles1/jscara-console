@@ -26,7 +26,7 @@
 
 <script lang="ts">
 import opentype from "opentype.js"
-import {AdaptiveLinearization} from "@/components/adaptive-linearization/index.ts"
+import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/index.ts"
 import SVGPath from "svgpath"
 import potrace from "potrace"
 
