@@ -147,8 +147,6 @@ export default Vue.extend({
             ctx!.clearRect(0, 0, canvas!.offsetWidth, canvas!.offsetHeight);
             const lin_path_elem = new Path2D(lin_path)
             ctx!.stroke(lin_path_elem)
-            // Add homing seq to end of gcode
-            gcode = gcode + ["G0Z10", "G0X0Y0", "G0Z0"].join("\n")
             // Emit the linearized gcode to the parent component for sending to the SCARA arm
             this.$emit("gcodegen", gcode)
         },
