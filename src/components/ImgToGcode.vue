@@ -11,7 +11,13 @@
                     <v-slider v-model="gcodeScale" thumb-label="always" @change="svgToGcode" min=0 max=200 label="GCode Scaler %"/>
                     <div v-if="imageType == 'photo'">
                         <br>
-                        <v-slider v-model="potraceParams.threshold" thumb-label="always" @change="photoToSVG" min=-1 max=255  label="Threshold"/>
+                        <v-slider v-model="potraceParams.threshold" thumb-label="always" @change="photoToSVG" min=-1 max=255  label="Threshold">
+                            <template v-slot:append>
+                                <v-icon v-ripple @click="potraceParams.threshold = -1" v-show="potraceParams.threshold != -1">
+                                    mdi-replay
+                                </v-icon>
+                            </template>
+                        </v-slider>
                         <br>
                         <v-slider v-model="potraceParams.turdSize" thumb-label="always" @change="photoToSVG" min=0 max=50  label="Min Speckle Size"/>
                         <br>
