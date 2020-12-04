@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/precache-manifest.ccc838406436295743a998e68f71aad1.js"
+  "/jscara-console/precache-manifest.57598c668abcc2f0befca6cba493891d.js"
 );
 
 workbox.core.setCacheNameDetails({prefix: "jscara-console"});
