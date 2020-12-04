@@ -341,7 +341,7 @@ export default Vue.extend({
 			this.regen_converted_gcode();
 		},
 		saveGcode(gcode: string) {
-			saveAs(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
+			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
 		},
 		clear_buffer() {
 			this.send_buffer = [];

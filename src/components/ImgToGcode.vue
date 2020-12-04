@@ -62,14 +62,14 @@ export default Vue.extend({
             if(["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
                 reader.onload = (ev) => {
                     this.imageType = "photo"
-                    this.rawPhoto = ev.target!.result as ArrayBuffer;
+                    this.rawPhoto = reader.result as ArrayBuffer;
                     this.photoToSVG();
                 };
                 imgreduce().toBlob(file, {max: 400}).then(((reducedFile: File) => reader.readAsArrayBuffer(reducedFile)))
             }
             else if(file.type == "image/svg+xml") {
                 reader.onload = (ev: any) => {
-                    this.rawSVG = ev.target!.result;
+                    this.rawSVG = reader.result as string;
                     this.svgToGcode();
                 };
                 reader.readAsText(file);
