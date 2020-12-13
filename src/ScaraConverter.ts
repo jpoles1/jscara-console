@@ -25,6 +25,8 @@ export interface ScaraProps {
     a2_secondary_receiver_teeth: number;
     a2_steps_per_rev: number;
     max_speed: number;
+    x_estop_offset: number;
+    y_estop_offset: number;
 }
 
 export const scara_default_props: ScaraProps = {
@@ -38,6 +40,8 @@ export const scara_default_props: ScaraProps = {
     a2_secondary_receiver_teeth: 80,
     a2_steps_per_rev: 800,
     max_speed: 4000,
+    x_estop_offset: 180,
+    y_estop_offset: 120,
 }  
 
 export class ScaraConverter {

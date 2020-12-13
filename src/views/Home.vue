@@ -23,6 +23,9 @@
 		</div>
 		<div v-if="!(reader === undefined || output_stream === undefined)">
 			<v-btn @click="home_scara" style="transform: scale(0.85);">
+				Home
+			</v-btn>
+			<v-btn @click="origin_scara" style="transform: scale(0.85);">
 				Origin
 			</v-btn>
 			<v-btn @click="write_serial('G92 X0 Y0\n')" style="transform: scale(0.85);">
@@ -222,10 +225,34 @@ export default Vue.extend({
 			await this.write_serial(scara_gcode + "\n");
 		},
 		async home_scara() {
+			const log_len = this.serial_log.length
+			/*await this.write_serial("M119\n");
+			setTimeout(() => {
+				const next_rx = this.serial_log[log_len]
+				if (next_rx == undefined) {
+					this.$toast("Failed to get status of endstops");
+				}
+			}, 1500)*/
 			const home_cmd_lines = [
-				"G1 Z10 F5000",
-				"G1 X0 Y0 F5000",
+				"G28 X",
+				"G28 Y",
+				"G0 Z10 F5000",
+				"G92 X0 Y0",
+				`G0 Y-${this.scara_conv.scara_props.y_estop_offset}`,
+				`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
 				"G1 Z0 F5000",
+			];
+			for (const gcode_line_index in home_cmd_lines) {
+				const gcode_line = home_cmd_lines[gcode_line_index]
+				console.log(gcode_line)
+				await this.write_serial(gcode_line + "\n");
+			}
+		},
+		async origin_scara() {
+			const home_cmd_lines = [
+				"G0 Z10 F5000",
+				"G0 X0 Y0 F5000",
+				"G0 Z0 F5000",
 			];
 			for (const gcode_line_index in home_cmd_lines) {
 				const gcode_line = home_cmd_lines[gcode_line_index]
