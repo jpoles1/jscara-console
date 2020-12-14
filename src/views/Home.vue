@@ -226,27 +226,28 @@ export default Vue.extend({
 		},
 		async home_scara() {
 			const log_len = this.serial_log.length
-			/*await this.write_serial("M119\n");
-			setTimeout(() => {
+			await this.write_serial("M119\n");
+			setTimeout(async () => {
 				const next_rx = this.serial_log[log_len]
 				if (next_rx == undefined) {
 					this.$toast("Failed to get status of endstops");
 				}
-			}, 1500)*/
-			const home_cmd_lines = [
-				"G28 X",
-				"G28 Y",
-				"G0 Z10 F5000",
-				"G92 X0 Y0",
-				`G0 Y-${this.scara_conv.scara_props.y_estop_offset}`,
-				`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
-				"G1 Z0 F5000",
-			];
-			for (const gcode_line_index in home_cmd_lines) {
-				const gcode_line = home_cmd_lines[gcode_line_index]
-				console.log(gcode_line)
-				await this.write_serial(gcode_line + "\n");
-			}
+				const home_cmd_lines = [
+					"G0 Z10 F5000",
+					"G28 X",
+					"G28 Y",
+					`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
+					`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
+					`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
+					"G92 X0 Y0",
+					"G1 Z0 F5000",
+				];
+				for (const gcode_line_index in home_cmd_lines) {
+					const gcode_line = home_cmd_lines[gcode_line_index]
+					console.log(gcode_line)
+					await this.write_serial(gcode_line + "\n");
+				}
+			}, 1500)
 		},
 		async origin_scara() {
 			const home_cmd_lines = [
