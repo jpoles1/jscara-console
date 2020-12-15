@@ -22,7 +22,7 @@
 			</v-btn>
 		</div>
 		<div v-if="!(reader === undefined || output_stream === undefined)">
-			<v-btn @click="home_scara" style="transform: scale(0.85);">
+			<v-btn @click="home_scara()" style="transform: scale(0.85);">
 				Home
 			</v-btn>
 			<v-btn @click="origin_scara" style="transform: scale(0.85);">
@@ -39,6 +39,9 @@
 			</v-btn>
 			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
 				Release Steppers
+			</v-btn>
+			<v-btn @click="home_scara(true)" style="transform: scale(0.85);">
+				Fold-Up
 			</v-btn>
 			<div style="display: flex; align-items: stretch;">
 				<div class="jog-box">
@@ -224,28 +227,51 @@ export default Vue.extend({
 			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
 			await this.write_serial(scara_gcode + "\n");
 		},
-		async home_scara() {
+		async home_scara(fold_up=false) {
 			const log_len = this.serial_log.length
 			await this.write_serial("M119\n");
 			setTimeout(async () => {
 				const next_rx = this.serial_log[log_len]
 				if (next_rx == undefined) {
-					this.$toast("Failed to get status of endstops");
-				}
-				const home_cmd_lines = [
-					"G0 Z10 F5000",
-					"G28 X",
-					"G28 Y",
-					`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
-					`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
-					`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
-					"G92 X0 Y0",
-					"G1 Z0 F5000",
-				];
-				for (const gcode_line_index in home_cmd_lines) {
-					const gcode_line = home_cmd_lines[gcode_line_index]
-					console.log(gcode_line)
-					await this.write_serial(gcode_line + "\n");
+					this.$toast("Failed to get status of endstops, cancelling homing.");
+					return
+				} else {
+					// Ensure endstops properly configured, should be
+					// x_max: open y_max: open
+					const estop_resp = next_rx.match(/x_max: (\w+)\s+y_max: (\w+)/)
+					console.log(next_rx, estop_resp);
+					if (!estop_resp || estop_resp[1] != "open" || estop_resp[2] != "open") {
+						this.$toast(`One or more endstops appear to be in an invalid state, cancelling homing: ${next_rx}`);
+						return
+					}
+					const fold_up_cmd_lines = [
+						"G0 Z10 F5000",
+						"G92 X0 Y0",
+						"G0 Y20",
+						"G28 X",
+						"G28 Y",
+						"G0 Y-30",
+						"G0 X-10",
+						"G92 X0 Y0",
+					]
+					const home_cmd_lines = [
+						"G0 Z10 F5000",
+						"G92 X0 Y0",
+						"G0 Y20",
+						"G28 X",
+						"G28 Y",
+						`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
+						`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
+						`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
+						"G92 X0 Y0",
+						"G1 Z0 F5000",
+					];
+					const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
+					for (const gcode_line_index in cmd_lines) {
+						const gcode_line = cmd_lines[gcode_line_index]
+						console.log(gcode_line)
+						await this.write_serial(gcode_line + "\n");
+					}
 				}
 			}, 1500)
 		},
