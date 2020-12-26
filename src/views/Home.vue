@@ -247,7 +247,7 @@ export default Vue.extend({
 					const fold_up_cmd_lines = [
 						"G0 Z10 F5000",
 						"G92 X0 Y0",
-						"G0 Y20",
+						"G0 Y25",
 						"G28 X",
 						"G28 Y",
 						"G0 Y-30",
@@ -257,7 +257,7 @@ export default Vue.extend({
 					const home_cmd_lines = [
 						"G0 Z10 F5000",
 						"G92 X0 Y0",
-						"G0 Y20",
+						"G0 Y25",
 						"G28 X",
 						"G28 Y",
 						`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
