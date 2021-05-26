@@ -22,9 +22,6 @@
 			</v-btn>
 		</div>
 		<div v-if="!(reader === undefined || output_stream === undefined)">
-			<v-btn @click="home_scara()" style="transform: scale(0.85);">
-				Home
-			</v-btn>
 			<v-btn @click="origin_scara" style="transform: scale(0.85);">
 				Origin
 			</v-btn>
@@ -37,8 +34,19 @@
 			<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
 				XYZ=0
 			</v-btn>
+			<br>
 			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
-				Release Steppers
+				Release
+			</v-btn>
+			<v-btn @click="write_serial('M410\n')" style="transform: scale(0.85);">
+				Quickstop
+			</v-btn>
+			<v-btn @click="write_serial('M112\n')" style="transform: scale(0.85);">
+				E-Stop
+			</v-btn>
+			<br>
+			<v-btn @click="home_scara()" style="transform: scale(0.85);">
+				Home
 			</v-btn>
 			<v-btn @click="home_scara(true)" style="transform: scale(0.85);">
 				Fold-Up
