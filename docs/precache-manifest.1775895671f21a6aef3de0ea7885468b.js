@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "da55842bdd2c4631c7a7",
+    "revision": "f94ef46af940fdf3767b",
     "url": "/jscara-console/css/app.a36202cd.css"
   },
   {
@@ -16,12 +16,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/jscara-console/fonts/GreatVibes-Regular.ttf"
   },
   {
-    "revision": "d7c2b0601677193e87882680c9672b5f",
+    "revision": "e79a2d7af30b64ab94df6871aacbdfd5",
     "url": "/jscara-console/index.html"
   },
   {
-    "revision": "da55842bdd2c4631c7a7",
-    "url": "/jscara-console/js/app.68f3e688.js"
+    "revision": "f94ef46af940fdf3767b",
+    "url": "/jscara-console/js/app.3caff517.js"
   },
   {
     "revision": "3ed0063161dd36b63861",

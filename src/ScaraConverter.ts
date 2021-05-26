@@ -102,7 +102,7 @@ export class ScaraConverter {
             this.error_reporter("ERROR: Conversion failed: GCODE results in NaNs!");
             throw "ERROR: Conversion failed: GCODE results in NaNs!";
         }
-        else if(scara_pos.a1 > 180 || scara_pos.a1 < 0 || scara_pos.a2 > 140 || scara_pos.a2 < -140) {
+        else if(scara_pos.a1 > 180 || scara_pos.a1 < 0 || scara_pos.a2 > 100 || scara_pos.a2 < -100) {
             console.log("ERROR: Conversion failed: GCODE falls outside useable work area!", next_pos, scara_pos);
             this.error_reporter("ERROR: Conversion failed: GCODE falls outside useable work area!");
             throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
