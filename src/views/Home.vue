@@ -105,7 +105,7 @@
 					Text 🢂 SCARA
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<TextToGcode v-on:gcodegen="gcode_from_text"/>
+					<TextToGcode v-on:gcodegen="gcode_from_text" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
 					<br>
 					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
 						Send Converted GCODE

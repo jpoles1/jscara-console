@@ -6,7 +6,7 @@
             <v-select v-model="fontName" :items="fontOptions" item-text="name" item-value="file" />
         </div>
         <br>
-        <canvas id="canvas" :width="240 * svgScaler" :height="120 * svgScaler" style="border: 1px solid black;"/>
+        <canvas id="canvas" :width="plot_width" :height="plot_height" style="border: 1px solid black;"/>
     </div>  
 </template>
 
@@ -16,13 +16,28 @@ import AdaptiveLinearization from "adaptive-linearization"
 import SVGPath from "svgpath"
 import Vue from "vue"
 export default Vue.extend({
+    props: {
+        arm_rad: {
+            default: 240,
+            type: Number,
+        },
+        x_offset: {
+            default: 0,
+            type: Number,
+        },
+        y_offset: {
+            default: 0,
+            type: Number,
+        },
+    },
     data() {
         return {
+            plot_width: 500, 
+            plot_height: 300,
             userText: "Jordan Poles",
             fontName: "GreatVibes-Regular.ttf",
             fontSize: 40,
             userInputDebounce: 0,
-            svgScaler: 2,
             fontOptions: [
                 {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
                 {name: "ChunkFive (block)", file: "ChunkFive-Regular.otf"},
@@ -41,16 +56,25 @@ export default Vue.extend({
         fontSize() {
             clearTimeout(this.userInputDebounce)
             this.userInputDebounce = setTimeout(() => this.textToGcode(), 500)
-        }
+        },
+        x_offset() {
+            clearTimeout(this.userInputDebounce)
+            this.userInputDebounce = setTimeout(() => this.textToGcode(), 500)
+        },
+        y_offset() {
+            clearTimeout(this.userInputDebounce)
+            this.userInputDebounce = setTimeout(() => this.textToGcode(), 500)
+        },
     },
     methods: {
         textToGcode() {
             // Load in the font of choice
+            const center_x = this.arm_rad / 2 + ((this.plot_width  - this.arm_rad) / 2)
             opentype.load(`fonts/${this.fontName}`, (err, font) => {
                 if (err) {
                     alert("Font could not be loaded: " + err);
                 } else {
-                    const raw_path = font!.getPath(this.userText, 10, this.fontSize + 10, this.fontSize).toPathData(2);
+                    const raw_path = font!.getPath(this.userText, this.x_offset, this.y_offset + this.fontSize, this.fontSize).toPathData(2);
                     const path_chunks = raw_path.split("Z") // Split on the "close path" cmd
                     const lift_dist = 10; // # of mm to lift pen off page inbetween letters
                     let gcode = `G1Z${lift_dist}` // Start by lifting pen before moving to initial position
@@ -64,7 +88,7 @@ export default Vue.extend({
                         let lineConsumer = (x1: number, y1: number, x2: number, y2: number, data: number) => {
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
                             gcode_cmds.push(`G1X${x2}Y${y2}`)
-                            svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 * this.svgScaler} ${y2 * this.svgScaler}`)
+                            svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + center_x} ${y2}`)
                         }
                         const al = new AdaptiveLinearization(lineConsumer);
                         svgpath.iterate(al.svgPathIterator);
@@ -84,6 +108,7 @@ export default Vue.extend({
                         lin_path = lin_path + " " + svg_cmds.join(" ")
                     })
                     // Emit the linearized gcode to the parent component for sending to the SCARA arm
+                    console.log(gcode);
                     this.$emit("gcodegen", gcode)
                     // Clear out the canvas
                     const canvas = document.getElementById("canvas") as HTMLCanvasElement
@@ -92,6 +117,13 @@ export default Vue.extend({
                     // Display the SVG path as a preview
                     const lin_path_elem = new Path2D(lin_path)
                     ctx!.stroke(lin_path_elem)
+                    ctx!.arc(center_x, 0, this.arm_rad, 0, 180)
+                    ctx!.stroke()
+                    ctx!.beginPath();
+                    ctx!.moveTo(center_x, 0);
+                    ctx!.lineTo(center_x, this.arm_rad);
+                    ctx!.closePath();
+                    ctx!.stroke()
                 }
             })
         },
