@@ -65,6 +65,9 @@ export class ScaraConverter {
         this.scara_props = scara_default_props;
         this.error_reporter = error_reporter || ((e) => {if (alert) { alert(e) } })
     }
+    valid_point(x: number, y: number): boolean {
+        return y <= Math.sqrt(Math.pow(this.scara_props.L1 + this.scara_props.L2, 2) - Math.pow(x, 2));
+    }
     parse_gcode_move(gcode_cmd: any[][]): EffectorPos {
         let move_pos: EffectorPos = {X: undefined, Y: undefined, Z: undefined, F: undefined, E: undefined};
         for (const gcode_seg_index in gcode_cmd) {
@@ -93,19 +96,25 @@ export class ScaraConverter {
     map_cartesian_to_scara(next_pos: EffectorPos): ScaraPos {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
-        const handedness = this.right_handed ? -1 : 1
+        const handedness = (this.right_handed ? -1 : 1) * (next_pos.X! / Math.abs(next_pos.X!));
         const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
         scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
         scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
+        const arms_d1 = scara_pos.a2 + (180 - scara_pos.a1);
+        const  arms_d2 = 360 - arms_d1;
         if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
-            console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos);
+            console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos, this.valid_point(next_pos.X!, next_pos.Y!));
             this.error_reporter("ERROR: Conversion failed: GCODE results in NaNs!");
             throw "ERROR: Conversion failed: GCODE results in NaNs!";
         }
-        else if(scara_pos.a1 > 180 || scara_pos.a1 < 0 || scara_pos.a2 > 100 || scara_pos.a2 < -100) {
+        else if(scara_pos.a1 >= 180 || scara_pos.a1 <= -180) {
             console.log("ERROR: Conversion failed: GCODE falls outside useable work area!", next_pos, scara_pos);
             this.error_reporter("ERROR: Conversion failed: GCODE falls outside useable work area!");
             throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
+        } else if(Math.abs(arms_d1) < 30 || Math.abs(arms_d2) < 30) {
+            console.log("ERROR: Conversion failed: GCODE causes arms to cross!", next_pos, scara_pos, arms_d1, arms_d2);
+            this.error_reporter("ERROR: Conversion failed: GCODE causes arms to cross!");
+            throw "ERROR: Conversion failed: GCODE causes arms to cross!";
         }
         // Round values
         scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(2));
