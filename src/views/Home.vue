@@ -96,7 +96,7 @@
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
 			Working Area: {{work_area_dim}} x {{work_area_dim}}
 		</div>
-		<div style="margin-top: 14px; min-height: 40vh; max-height: 60vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
+		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
 		<v-expansion-panels>
@@ -302,7 +302,7 @@ export default Vue.extend({
 						} 
 						// else if (this.recv_buffer.includes("error:")) {}
 						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
-						this.serial_log.push(this.recv_buffer);
+						this.serial_log.unshift(this.recv_buffer);
 						this.recv_buffer = "";
 					}
 				}
