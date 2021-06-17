@@ -34,14 +34,14 @@ export const scara_default_props: ScaraProps = {
     L2: 120,
     a1_driver_teeth: 20,
     a1_receiver_teeth: 80,
-    a1_steps_per_rev: 800,
+    a1_steps_per_rev: 360 / 1.8 * (1/4),
     a2_driver_teeth: 20,
     a2_receiver_teeth: 80,
     a2_secondary_receiver_teeth: 80,
-    a2_steps_per_rev: 800,
-    max_speed: 4000,
+    a2_steps_per_rev: 360 / 1.8 * (1/4),
+    max_speed: 50000,
     x_estop_offset: 185,
-    y_estop_offset: 130,
+    y_estop_offset: 115,
 }  
 
 export class ScaraConverter {
@@ -57,7 +57,7 @@ export class ScaraConverter {
     constructor(error_reporter?: (e: string) => void) {
         this.x_offset = 0;
         this.y_offset = 0;
-        this.inner_rad = 30;
+        this.inner_rad = 0;
         this.skew =  0;
         this.feed_rate = 2000;
         this.right_handed = false;
@@ -97,7 +97,7 @@ export class ScaraConverter {
         const R = Math.hypot(next_pos.X!, next_pos.Y!);
         const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
         const handedness = (this.right_handed ? -1 : 1) * (next_pos.X! / Math.abs(next_pos.X!));
-        const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0} 
+        const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0}
         scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
         scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
         const arms_d1 = scara_pos.a2 + (180 - scara_pos.a1);

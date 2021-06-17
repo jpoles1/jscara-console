@@ -35,8 +35,8 @@
 				XYZ=0
 			</v-btn>
 			<br>
-			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
-				Release
+			<v-btn @click="clear_buffer" v-if="send_buffer.length > 0" style="transform: scale(0.85);">
+				Clear Buffer
 			</v-btn>
 			<v-btn @click="write_serial('M410\n')" style="transform: scale(0.85);">
 				Quickstop
@@ -50,6 +50,9 @@
 			</v-btn>
 			<v-btn @click="home_scara(true)" style="transform: scale(0.85);">
 				Fold-Up
+			</v-btn>
+			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
+				Release
 			</v-btn>
 			<div style="display: flex; align-items: stretch;">
 				<div class="jog-box">
@@ -236,34 +239,34 @@ export default Vue.extend({
 			await this.write_serial(scara_gcode + "\n");
 		},
 		async home_scara(fold_up=false) {
-					const fold_up_cmd_lines = [
-						"G0 Z10 F5000",
-						"G92 X0 Y0",
-						"G0 Y25",
-						"G28 X",
-						"G28 Y",
-						"G0 Y-30",
-						"G0 X-10",
-						"G92 X0 Y0",
-					]
-					const home_cmd_lines = [
-						"G0 Z10 F5000",
-						"G92 X0 Y0",
+			const fold_up_cmd_lines = [
+				"G0 Z10 F5000",
+				"G92 X0 Y0",
+				"G0 Y25",
+				"G28 X",
+				"G28 Y",
+				"G0 Y-30",
+				"G0 X-10",
+				"G92 X0 Y0",
+			]
+			const home_cmd_lines = [
+				"G0 Z10 F5000",
+				"G92 X0 Y0",
 				"G0 Y30",
-						"G28 X",
-						"G28 Y",
-						`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
-						`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
-						`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
-						"G92 X0 Y0",
-						"G1 Z0 F5000",
-					];
-					const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
-					for (const gcode_line_index in cmd_lines) {
-						const gcode_line = cmd_lines[gcode_line_index]
-						console.log(gcode_line)
-						await this.write_serial(gcode_line + "\n");
-					}
+				"G28 X",
+				"G28 Y",
+				`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
+				`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
+				`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
+				"G92 X0 Y0",
+				"G1 Z0 F5000",
+			];
+			const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
+			for (const gcode_line_index in cmd_lines) {
+				const gcode_line = cmd_lines[gcode_line_index]
+				console.log(gcode_line)
+				await this.write_serial(gcode_line + "\n");
+			}
 		},
 		async origin_scara() {
 			const home_cmd_lines = [
@@ -382,8 +385,8 @@ export default Vue.extend({
             reader.readAsText(file);
 		},
 		gcode_from_text(gcode: string) {
-			// Add homing seq to end of gcode
-			this.raw_gcode = gcode + ["G0Z10", `G0X${this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2}Y-${this.scara_conv.inner_rad}`, "G0Z0"].join("\n");
+			// Add homing seq to end of gco de
+			this.raw_gcode = gcode// + ["G0Z10", `G0X${this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2}Y-${this.scara_conv.inner_rad}`, "G0Z0"].join("\n");
 			this.regen_converted_gcode();
 		},
 		saveGcode(gcode: string) {
