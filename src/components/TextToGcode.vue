@@ -87,7 +87,7 @@ export default Vue.extend({
                         // Iterate over svg commands and convert to linearized versions of both GCode and SVG paths
                         let lineConsumer = (x1: number, y1: number, x2: number, y2: number, data: number) => {
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
-                            gcode_cmds.push(`G1X${x2}Y${y2}`)
+                            gcode_cmds.push(`G1 X${x2} Y${y2}`)
                             svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + center_x} ${y2}`)
                         }
                         const al = new AdaptiveLinearization(lineConsumer);
