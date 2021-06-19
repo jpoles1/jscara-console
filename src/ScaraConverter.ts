@@ -7,9 +7,16 @@ export interface EffectorPos {
     E?: number,
 }
 
+enum Hand {
+    Left = -1,
+    Right = 1,
+}
+
 export interface ScaraPos {
     a1: number,
     a2: number,
+    hand: Hand,
+    F: number,
     Z: number,
     E: number,
 }
@@ -39,7 +46,7 @@ export const scara_default_props: ScaraProps = {
     a2_receiver_teeth: 80,
     a2_secondary_receiver_teeth: 80,
     a2_steps_per_rev: 360 / 1.8 * (1/4),
-    max_speed: 50000,
+    max_speed: 20000,
     x_estop_offset: 185,
     y_estop_offset: 115,
 }  
@@ -50,18 +57,18 @@ export class ScaraConverter {
     inner_rad: number;
     skew: number;
     feed_rate: number;
-    right_handed: boolean;
+    pref_hand: Hand;
     max_seg_length: number;
     scara_props: ScaraProps;
     error_reporter: (e: string) => void;
     constructor(error_reporter?: (e: string) => void) {
-        this.x_offset = 0;
-        this.y_offset = 0;
+        this.x_offset = -20;
+        this.y_offset = 40;
         this.inner_rad = 0;
         this.skew =  0;
         this.feed_rate = 2000;
-        this.right_handed = false;
-        this.max_seg_length = .5;
+        this.pref_hand = Hand.Right;
+        this.max_seg_length = 0.2;
         this.scara_props = scara_default_props;
         this.error_reporter = error_reporter || ((e) => {if (alert) { alert(e) } })
     }
@@ -93,40 +100,53 @@ export class ScaraConverter {
     scara_distance(start: ScaraPos, end: ScaraPos): number {
         return Math.sqrt((end.a1-start.a1)**2+(end.a2-start.a2)**2+(end.Z-start.Z)**2);
     };
+    last_hand: Hand = Hand.Right;
     map_cartesian_to_scara(next_pos: EffectorPos): ScaraPos {
-        const R = Math.hypot(next_pos.X!, next_pos.Y!);
-        const gamma = Math.atan2(next_pos.Y!, next_pos.X!)
-        const handedness = (this.right_handed ? -1 : 1) * (next_pos.X! / Math.abs(next_pos.X!));
-        const scara_pos: ScaraPos = {a1: 0, a2: 0, Z: 0, E: 0}
-        scara_pos.a1 = (gamma + handedness * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
-        scara_pos.a2 = (gamma - handedness * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
-        const arms_d1 = scara_pos.a2 + (180 - scara_pos.a1);
-        const  arms_d2 = 360 - arms_d1;
-        if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
-            console.log("ERROR: Conversion failed: GCODE results in NaNs!", next_pos, scara_pos, this.valid_point(next_pos.X!, next_pos.Y!));
-            this.error_reporter("ERROR: Conversion failed: GCODE results in NaNs!");
-            throw "ERROR: Conversion failed: GCODE results in NaNs!";
+        let error = undefined;
+        let cart_to_scara = (x: number, y: number, flip_hand: boolean = false): ScaraPos | undefined  => {
+            const scara_pos: ScaraPos = {a1: 0, a2: 0, hand: this.last_hand * (flip_hand ? -1 : 1), F: 0, Z: 0, E: 0}
+            const R = Math.hypot(x, y);
+            const gamma = Math.atan2(y, x)
+            scara_pos.a1 = (gamma + scara_pos.hand * Math.acos((R**2 + (this.scara_props.L1**2)-(this.scara_props.L2**2))/(2*this.scara_props.L1*R))) * 180 / Math.PI
+            scara_pos.a2 = (gamma - scara_pos.hand * Math.acos((R**2 + (this.scara_props.L2**2)-(this.scara_props.L1**2))/(2*this.scara_props.L2*R))) * 180 / Math.PI
+            if (isNaN(scara_pos.a1) || isNaN(scara_pos.a2)) {
+                error = "ERROR: Conversion failed - GCODE results in NaNs!"
+                console.log(error, next_pos, scara_pos, this.valid_point(x, y));
+                return undefined
+            }
+            if(scara_pos.a1 >= 180 || scara_pos.a1 <= -180) {
+                error = "ERROR: Conversion failed: GCODE falls outside useable work area!"
+                console.log(error, next_pos, scara_pos);
+                return undefined
+            }    
+            let d1 = scara_pos.a2 + (180 - scara_pos.a1);
+            let d2 = 360 - d1;
+            if(Math.abs(d1) < 30 || Math.abs(d2) < 30) {
+                error = "ERROR: Conversion failed: GCODE causes arms to cross!"
+                console.log(error, next_pos, scara_pos, d1, d2);
+                return undefined
+            }
+            return scara_pos;
         }
-        else if(scara_pos.a1 >= 180 || scara_pos.a1 <= -180) {
-            console.log("ERROR: Conversion failed: GCODE falls outside useable work area!", next_pos, scara_pos);
-            this.error_reporter("ERROR: Conversion failed: GCODE falls outside useable work area!");
-            throw "ERROR: Conversion failed: GCODE falls outside useable work area!";
-        } else if(Math.abs(arms_d1) < 30 || Math.abs(arms_d2) < 30) {
-            console.log("ERROR: Conversion failed: GCODE causes arms to cross!", next_pos, scara_pos, arms_d1, arms_d2);
-            this.error_reporter("ERROR: Conversion failed: GCODE causes arms to cross!");
-            throw "ERROR: Conversion failed: GCODE causes arms to cross!";
+        let scara_pos = cart_to_scara(next_pos.X!, next_pos.Y!);
+        if (scara_pos == undefined) {
+            scara_pos = cart_to_scara(next_pos.X!, next_pos.Y!, true);
+        }
+        if (scara_pos == undefined) {
+            throw error
         }
         // Round values
         scara_pos.a1 = parseFloat(scara_pos.a1.toFixed(2));
         scara_pos.a2 = parseFloat(scara_pos.a2.toFixed(2));
         scara_pos.Z = next_pos.Z!;
         scara_pos.E = next_pos.E!;
+        this.last_hand = scara_pos.hand;
         return scara_pos;
     };
     cartesian_to_scara_feedrate(current_pos: EffectorPos, next_pos: EffectorPos, cartesian_feedrate: number) {
         const a = this.scara_props.L1;
         const b = this.scara_props.L2;
-        const handedness = this.right_handed ? -1 : 1
+        const handedness = this.pref_hand //FIX
         const travel_dist = Math.sqrt((next_pos.X!-current_pos.X!)**2+(next_pos.Y!-current_pos.Y!)**2);
         if(travel_dist === 0) return 0;
         const x_dot = (next_pos.X!-current_pos.X!)/travel_dist*cartesian_feedrate // Linear velocity in the x direction
@@ -189,13 +209,13 @@ export class ScaraConverter {
                 // First command
                 if (next_pos.X === current_pos.X && next_pos.Y === current_pos.Y) {
                     if (next_pos.Z !== current_pos.Z) {
-                        cmd_list.push(`G1 Z${next_pos.Z} F${this.feed_rate}`)
+                        cmd_list.push(`G1 Z${next_pos.Z} F${next_pos.F}`)
                     }
                     return [cmd_list, next_pos]; 
                 }
                 if ((current_pos.X === undefined && current_pos.Y === undefined) || rapid){
                     const scara_pos = this.map_cartesian_to_scara(this.translate(next_pos));
-                    cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.feed_rate}`)
+                    cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.scara_props.max_speed}`)
                     return [cmd_list, next_pos]; 
                 }
                 else {
@@ -211,19 +231,20 @@ export class ScaraConverter {
                             Y: mid_pos.Y! + (next_pos.Y! - mid_pos.Y!)*this.max_seg_length/travel_dist,
                             Z: mid_pos.Z! + (next_pos.Z! - mid_pos.Z!)*this.max_seg_length/travel_dist,
                         }
-                        //const scara_pos = this.map_cartesian_to_scara(this.translate(mid_pos));
                         const scara_pos = this.map_cartesian_to_scara(this.translate(mid_pos));
-                        const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, this.feed_rate)
+                        const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, next_pos.F!)
                         cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${scara_feedrate}`)
+                        //cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.scara_props.max_speed}`)
                         travel_dist = Math.sqrt((next_pos.X!-mid_pos.X!)**2+(next_pos.Y!-mid_pos.Y!)**2)
                     }
                     const final_scara_pos = this.map_cartesian_to_scara(this.translate(mid_pos));
-                    const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, this.feed_rate)
+                    const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, next_pos.F!)
                     cmd_list.push(`G1 X${final_scara_pos.a1} Y${final_scara_pos.a2} Z${final_scara_pos.Z} F${scara_feedrate}`)
+                    //cmd_list.push(`G1 X${final_scara_pos.a1} Y${final_scara_pos.a2} Z${final_scara_pos.Z} F${this.scara_props.max_speed}`)
                     return [cmd_list, next_pos];
                 }
             } else if(next_cmd.words[0][0] === "G" && next_cmd.words[0][1] === 92.1) {
-                return [[], {X: 0, Y: 0, Z: 0, E: 0, F: this.feed_rate}]
+                return [[], {X: 0, Y: 0, Z: 0, E: 0, F: current_pos.F}]
             }
             return [[`(unable to parse line: ${next_cmd_str})`], current_pos]
         }

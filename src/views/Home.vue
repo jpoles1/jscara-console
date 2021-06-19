@@ -38,7 +38,7 @@
 			<v-btn @click="clear_buffer" v-if="send_buffer.length > 0" style="transform: scale(0.85);">
 				Clear Buffer
 			</v-btn>
-			<v-btn @click="write_serial('M410\n')" style="transform: scale(0.85);">
+			<v-btn @click="write_serial('M410\n'); ready_to_send=true" style="transform: scale(0.85);">
 				Quickstop
 			</v-btn>
 			<v-btn @click="write_serial('M112\n')" style="transform: scale(0.85);">
@@ -116,6 +116,9 @@
 					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
 						Regen SCARA GCODE
 					</v-btn>
+					<v-btn @click="save_gcode(converted_gcode.join('\n'))" v-if="converted_gcode.length > 0">
+						Save Converted GCODE
+					</v-btn>
 					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
 						Unclog Stuck Buffer
 					</v-btn>
@@ -143,7 +146,7 @@
 					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 						Clear Buffer
 					</v-btn>
-					<v-btn @click="saveGcode(raw_gcode)" v-if="converted_gcode.length > 0">
+					<v-btn @click="save_gcode(raw_gcode)" v-if="converted_gcode.length > 0">
 						Save Raw GCODE
 					</v-btn>
 				</v-expansion-panel-content>
@@ -204,6 +207,7 @@ export default Vue.extend({
 		return {
 			raw_gcode: "",
 			send_buffer: [] as string[],
+			ready_to_send: true,
 			last_resp: undefined as number | undefined,
 			send_buffer_interval: undefined as any,
 			converted_gcode: [] as string[],
@@ -234,7 +238,7 @@ export default Vue.extend({
 	},
 	methods: {
 		async goto_point() {
-			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F50000\n`
+			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F20000\n`
 			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
 			await this.write_serial(scara_gcode + "\n");
 		},
@@ -299,13 +303,16 @@ export default Vue.extend({
 					if (this.recv_buffer.includes("\n")){
 						if(this.recv_buffer.includes("ok")) {
 							this.last_resp = Date.now();
-							if(this.send_buffer.length > 0) {
-								this.write_next_in_buffer_to_serial();
+							this.ready_to_send = true;
+							if (this.send_buffer.length > 0) {
+								//this.write_next_in_buffer_to_serial();
 							}
-						} 
+						} else {
+							// Don't bother recording "ok" to serial log
+							this.serial_log.unshift(this.recv_buffer);
+						}
 						// else if (this.recv_buffer.includes("error:")) {}
 						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
-						this.serial_log.unshift(this.recv_buffer);
 						this.recv_buffer = "";
 					}
 				}
@@ -324,15 +331,7 @@ export default Vue.extend({
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
-			//console.log(data, this.output_stream);
-			if (this.output_stream === undefined) {
-				this.$toast("Failed to write to serial");
-				return;
-			}
-			const writer = this.output_stream.getWriter();
-			await writer.write(data);
-			await writer.releaseLock();
-			//console.log("written");
+			this.send_buffer.push(data);
 		},
 		async serial_connect() {
 			let port = await (navigator as any).serial.requestPort();
@@ -360,11 +359,19 @@ export default Vue.extend({
 			const encoder = new TextEncoderStream();
 			const outputDone = encoder.readable.pipeTo(port.writable);
 			this.output_stream = encoder.writable;
+			const writer = this.output_stream!.getWriter();
 			this.send_buffer_interval = setInterval(() => {
-				if (this.send_buffer.length > 0 && ((Date.now() - (this.last_resp || 0)) / 1000 > 1)) {
-					this.write_serial("?\n");
+				if (this.send_buffer.length > 0) {
+					if (this.ready_to_send) {
+						this.ready_to_send = false;
+						writer.write(this.send_buffer.shift() + "\n");
+						//writer.releaseLock();
+					}
+					else if((Date.now() - (this.last_resp || 0)) / 1000 > 1) {
+						this.write_serial("?\n");
+					}
 				}
-			}, 500);
+			}, 5);
 			// Setup Reader 
 			let decoder = new TextDecoderStream();
 			const inputDone = port.readable.pipeTo(decoder.writable);
@@ -389,11 +396,12 @@ export default Vue.extend({
 			this.raw_gcode = gcode// + ["G0Z10", `G0X${this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2}Y-${this.scara_conv.inner_rad}`, "G0Z0"].join("\n");
 			this.regen_converted_gcode();
 		},
-		saveGcode(gcode: string) {
+		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
 		},
 		clear_buffer() {
 			this.send_buffer = [];
+			this.ready_to_send = true;
 		},
 		async send_converted_gcode() {
 			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
