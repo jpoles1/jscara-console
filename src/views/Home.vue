@@ -5,7 +5,7 @@
 			<code>#enable-experimental-web-platform-features</code> flag in
 			<code>chrome://flags</code>
 		</div>
-		<div v-if="reader === undefined || output_stream === undefined">
+		<div v-if="!serial_connected">
 			<v-btn @click="serial_connect" v-if="!attempting_to_connect" color="primary">
 				Connect to SCARA
 			</v-btn>
@@ -21,7 +21,7 @@
 				Send
 			</v-btn>
 		</div>
-		<div v-if="!(reader === undefined || output_stream === undefined)">
+		<div v-if="serial_connected">
 			<v-btn @click="origin_scara" style="transform: scale(0.85);">
 				Origin
 			</v-btn>
@@ -119,9 +119,6 @@
 					<v-btn @click="save_gcode(converted_gcode.join('\n'))" v-if="converted_gcode.length > 0">
 						Save Converted GCODE
 					</v-btn>
-					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
-						Unclog Stuck Buffer
-					</v-btn>
 					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 						Clear Buffer
 					</v-btn>
@@ -139,9 +136,6 @@
 					</v-btn>
 					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
 						Regen SCARA GCODE
-					</v-btn>
-					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
-						Unclog Stuck Buffer
 					</v-btn>
 					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 						Clear Buffer
@@ -164,9 +158,6 @@
 					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
 						Regen SCARA GCODE
 					</v-btn>
-					<v-btn @click="write_next_in_buffer_to_serial" v-if="send_buffer.length > 0">
-						Unclog Stuck Buffer
-					</v-btn>
 					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
 						Clear Buffer
 					</v-btn>
@@ -185,6 +176,9 @@
 </template>
 
 <script lang="ts">
+
+import { WorkerMsg, WorkerCmd, MasterCmd } from "@/serialtypes";
+const serialworker = new Worker('!@/serialworker.ts', { type: 'module' });
 
 const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -219,10 +213,11 @@ export default Vue.extend({
 			cmd: "",
 			jog_inc: {x: 10, y: 10, z: 10},
 			goto: {x: 0, y: 0},
+			serial_connected: false,
 			attempting_to_connect: false,
 			cancel_connect: false,
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
-			output_stream: undefined as WritableStream<any> | undefined,
+			writer: undefined as WritableStreamDefaultWriter<any> | undefined,
 			regen_debounce: 0,
 		};
 	},
@@ -294,90 +289,16 @@ export default Vue.extend({
 				this.cmd = this.send_log[this.send_log_index];
 			}
 		},
-		async read_serial() {
-			if (this.reader === undefined) return;
-			while (true) {
-				let { value, done } = await this.reader.read();
-				if (value) {
-					this.recv_buffer += value;
-					if (this.recv_buffer.includes("\n")){
-						if(this.recv_buffer.includes("ok")) {
-							this.last_resp = Date.now();
-							this.ready_to_send = true;
-							if (this.send_buffer.length > 0) {
-								//this.write_next_in_buffer_to_serial();
-							}
-						} else {
-							// Don't bother recording "ok" to serial log
-							this.serial_log.unshift(this.recv_buffer);
-						}
-						// else if (this.recv_buffer.includes("error:")) {}
-						this.recv_buffer = this.recv_buffer.replace("\n", "<br>")
-						this.recv_buffer = "";
-					}
-				}
-				if (done) {
-					this.reader.releaseLock();
-					break;
-				}
-			}
-		},
-		async write_next_in_buffer_to_serial() {
-			this.write_serial(this.send_buffer.shift() + "\n");
-		},
 		async write_cmd_to_serial() {
 			await this.write_serial(this.cmd + "\n");
 			this.send_log.unshift(this.cmd);
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
-			this.send_buffer.push(data);
+			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data } as WorkerMsg)
 		},
 		async serial_connect() {
-			let port = await (navigator as any).serial.requestPort();
-			// - Wait for the port to open.
-			let port_open_error = "" as any;
-			this.attempting_to_connect = true;
-			while (port_open_error != undefined) {
-				port_open_error = undefined;
-				await port.open({ baudRate: 250000 }).catch((e: any) => {
-					this.$toast(`Failed to open serial connection: ${e}`)
-					port_open_error = e;
-				});
-				if (this.cancel_connect) {
-					this.cancel_connect = false;
-					this.attempting_to_connect = false;
-					return;
-				}
-				if (port_open_error != undefined) {
-					await async_wait(1500);
-				}
-			}
-			// Connected successfully
-			this.attempting_to_connect = false;
-			// Setup Writer
-			const encoder = new TextEncoderStream();
-			const outputDone = encoder.readable.pipeTo(port.writable);
-			this.output_stream = encoder.writable;
-			const writer = this.output_stream!.getWriter();
-			this.send_buffer_interval = setInterval(() => {
-				if (this.send_buffer.length > 0) {
-					if (this.ready_to_send) {
-						this.ready_to_send = false;
-						writer.write(this.send_buffer.shift() + "\n");
-						//writer.releaseLock();
-					}
-					else if((Date.now() - (this.last_resp || 0)) / 1000 > 1) {
-						this.write_serial("?\n");
-					}
-				}
-			}, 5);
-			// Setup Reader 
-			let decoder = new TextDecoderStream();
-			const inputDone = port.readable.pipeTo(decoder.writable);
-			const inputStream = decoder.readable;
-			this.reader = inputStream.getReader();
-			this.read_serial();
+			serialworker.postMessage({ type: MasterCmd.SerialConnect } as WorkerMsg)
 		},
 		regen_converted_gcode() {
 			this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
@@ -400,12 +321,13 @@ export default Vue.extend({
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
 		},
 		clear_buffer() {
-			this.send_buffer = [];
+			serialworker.postMessage({ type: MasterCmd.ClearBuffer } as WorkerMsg)
 			this.ready_to_send = true;
 		},
 		async send_converted_gcode() {
-			this.send_buffer = this.send_buffer.concat(this.converted_gcode);
-			this.write_next_in_buffer_to_serial();
+			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: this.converted_gcode})
+			//this.send_buffer = this.send_buffer.concat(this.converted_gcode);
+			//this.write_next_in_buffer_to_serial();
 		}
 	},
 	computed: {
@@ -419,6 +341,16 @@ export default Vue.extend({
 		if ((navigator as any).serial !== undefined) {
 			const notSupported = document.getElementById("notSupported");
 			notSupported!.style.display = "none";
+		}
+		serialworker.onmessage = (event) => {
+			const msg = event.data;
+			if (msg.type == WorkerCmd.SerialConnected) {
+				this.serial_connected = true;
+			}
+			if (msg.type == WorkerCmd.SerialRecv) {
+				this.serial_log.unshift(msg.data)
+			}
+			console.log(msg)
 		}
 	},
 });

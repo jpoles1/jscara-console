@@ -1,8 +1,14 @@
+const WorkerPlugin = require('worker-plugin');
+
 module.exports = {
-  "transpileDependencies": [
+  transpileDependencies: [
     "vuetify"
   ],
-  "outputDir": "docs",
-  "publicPath": process.env.NODE_ENV === 'production'  ? '/jscara-console/' : '/'
-
+  configureWebpack: {
+    plugins: [
+      new WorkerPlugin()
+    ]
+  },
+  outputDir: "docs",
+  publicPath: process.env.NODE_ENV === 'production'  ? '/jscara-console/' : '/'
 }
