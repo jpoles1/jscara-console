@@ -239,7 +239,7 @@ export default Vue.extend({
 		},
 		async home_scara(fold_up=false) {
 			const fold_up_cmd_lines = [
-				"G0 Z10 F5000",
+				"G0 Z30 F5000",
 				"G92 X0 Y0",
 				"G0 Y25",
 				"G28 X",
@@ -249,7 +249,7 @@ export default Vue.extend({
 				"G92 X0 Y0",
 			]
 			const home_cmd_lines = [
-				"G0 Z10 F5000",
+				"G0 Z30 F5000",
 				"G92 X0 Y0",
 				"G0 Y30",
 				"G28 X",
