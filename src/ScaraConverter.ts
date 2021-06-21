@@ -102,7 +102,7 @@ export class ScaraConverter {
     };
     last_hand: Hand = Hand.Right;
     map_cartesian_to_scara(next_pos: EffectorPos): ScaraPos {
-        let error = undefined;
+        let error = undefined as string | undefined;
         let cart_to_scara = (x: number, y: number, flip_hand: boolean = false): ScaraPos | undefined  => {
             const scara_pos: ScaraPos = {a1: 0, a2: 0, hand: this.last_hand * (flip_hand ? -1 : 1), F: 0, Z: 0, E: 0}
             const R = Math.hypot(x, y);
@@ -133,6 +133,7 @@ export class ScaraConverter {
             scara_pos = cart_to_scara(next_pos.X!, next_pos.Y!, true);
         }
         if (scara_pos == undefined) {
+            this.error_reporter(error!);
             throw error
         }
         // Round values
