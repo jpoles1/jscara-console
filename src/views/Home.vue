@@ -253,7 +253,6 @@ export default Vue.extend({
 			const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
 			for (const gcode_line_index in cmd_lines) {
 				const gcode_line = cmd_lines[gcode_line_index]
-				console.log(gcode_line)
 				await this.write_serial(gcode_line + "\n");
 			}
 		},
@@ -333,7 +332,6 @@ export default Vue.extend({
 			if (msg.type == WorkerCmd.SerialRecv) {
 				this.serial_log.unshift(msg.data)
 			}
-			console.log(msg)
 		}
 	},
 });

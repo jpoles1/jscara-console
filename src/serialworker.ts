@@ -4,9 +4,7 @@ let send_buffer: string[] = [];
 
 addEventListener('message', event => {
     const msg: WorkerMsg = event.data
-    console.log(msg)
     if (msg.type == MasterCmd.SerialConnect) {
-        console.log("TESTSTSTS")
         serial_connect();
     }
     if (msg.type == MasterCmd.PushToBuffer) {
@@ -45,7 +43,6 @@ const serial_connect = async function() {
         }
     }
     // Connected successfully
-    console.log("YAY")
     postMessage({ type: WorkerCmd.SerialConnected } as WorkerMsg)
 
     // Setup Writer
@@ -67,7 +64,8 @@ const serial_connect = async function() {
     const write_interval = setInterval(async () => {
         if (send_buffer.length > 0) {
             if (ready_to_send) {
-                console.log(Date.now() - last_send);
+                // Log time since last cmd
+                //console.log(Date.now() - last_send);
                 last_send = Date.now();
                 ready_to_send = false;
                 writer.write(send_buffer.shift() + "\n");
