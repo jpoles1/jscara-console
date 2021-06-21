@@ -74,7 +74,7 @@ export default Vue.extend({
                 if (err) {
                     alert("Font could not be loaded: " + err);
                 } else {
-                    const raw_path = font!.getPath(this.userText, this.x_offset, this.y_offset + this.fontSize, this.fontSize).toPathData(2);
+                    const raw_path = font!.getPath(this.userText, 0, this.fontSize, this.fontSize).toPathData(2);
                     const path_chunks = raw_path.split("Z") // Split on the "close path" cmd
                     const lift_dist = 10; // # of mm to lift pen off page inbetween letters
                     let gcode = `G1Z${lift_dist}` // Start by lifting pen before moving to initial position
@@ -88,7 +88,7 @@ export default Vue.extend({
                         let lineConsumer = (x1: number, y1: number, x2: number, y2: number, data: number) => {
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
                             gcode_cmds.push(`G1 X${x2} Y${y2}`)
-                            svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + center_x} ${y2}`)
+                            svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + this.x_offset + center_x} ${y2 + this.y_offset}`)
                         }
                         const al = new AdaptiveLinearization(lineConsumer);
                         svgpath.iterate(al.svgPathIterator);
