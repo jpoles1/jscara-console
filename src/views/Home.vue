@@ -35,7 +35,7 @@
 				XYZ=0
 			</v-btn>
 			<br>
-			<v-btn @click="clear_buffer" v-if="send_buffer.length > 0" style="transform: scale(0.85);">
+			<v-btn @click="clear_buffer" style="transform: scale(0.85);">
 				Clear Buffer
 			</v-btn>
 			<v-btn @click="write_serial('M410\n'); ready_to_send=true" style="transform: scale(0.85);">
@@ -97,7 +97,6 @@
 			</div>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
-			Working Area: {{work_area_dim}} x {{work_area_dim}}
 		</div>
 		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
@@ -119,9 +118,6 @@
 					<v-btn @click="save_gcode(converted_gcode.join('\n'))" v-if="converted_gcode.length > 0">
 						Save Converted GCODE
 					</v-btn>
-					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
-						Clear Buffer
-					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 			<v-expansion-panel>
@@ -136,9 +132,6 @@
 					</v-btn>
 					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
 						Regen SCARA GCODE
-					</v-btn>
-					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
-						Clear Buffer
 					</v-btn>
 					<v-btn @click="save_gcode(raw_gcode)" v-if="converted_gcode.length > 0">
 						Save Raw GCODE
@@ -157,9 +150,6 @@
 					</v-btn>
 					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
 						Regen SCARA GCODE
-					</v-btn>
-					<v-btn @click="clear_buffer" v-if="send_buffer.length > 0">
-						Clear Buffer
 					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
@@ -329,13 +319,6 @@ export default Vue.extend({
 			//this.send_buffer = this.send_buffer.concat(this.converted_gcode);
 			//this.write_next_in_buffer_to_serial();
 		}
-	},
-	computed: {
-		work_area_dim(): number {
-			const R = this.scara_conv.inner_rad
-			const L = this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2
-			return parseFloat(((-R + Math.sqrt(2 * L**2 - R**2))/2).toFixed(0));
-		},
 	},
 	mounted() {
 		if ((navigator as any).serial !== undefined) {
