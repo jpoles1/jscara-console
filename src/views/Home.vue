@@ -329,9 +329,13 @@ export default Vue.extend({
 			if (msg.type == WorkerCmd.SerialConnected) {
 				this.serial_connected = true;
 			}
-			if (msg.type == WorkerCmd.SerialRecv) {
+			else if (msg.type == WorkerCmd.SerialRecv) {
 				this.serial_log.unshift(msg.data)
 			}
+			else if (msg.type == WorkerCmd.SerialError) {
+				this.$toast(msg.data, {x: "center", color: "red"})			
+			}
+
 		}
 	},
 });
