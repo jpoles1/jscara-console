@@ -258,7 +258,7 @@ export default Vue.extend({
 		},
 		async origin_scara() {
 			const home_cmd_lines = [
-				"G0 Z10 F5000",
+				"G0 Z30 F5000",
 				"G0 X0 Y0 F5000",
 				"G0 Z0 F5000",
 			];
