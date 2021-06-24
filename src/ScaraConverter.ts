@@ -62,13 +62,13 @@ export class ScaraConverter {
     scara_props: ScaraProps;
     error_reporter: (e: string) => void;
     constructor(error_reporter?: (e: string) => void) {
-        this.x_offset = -20;
-        this.y_offset = 40;
+        this.x_offset = 0;
+        this.y_offset = 60;
         this.inner_rad = 0;
         this.skew =  0;
         this.feed_rate = 2000;
         this.pref_hand = Hand.Right;
-        this.max_seg_length = 0.2;
+        this.max_seg_length = 0.1;
         this.scara_props = scara_default_props;
         this.error_reporter = error_reporter || ((e) => {if (alert) { alert(e) } })
     }
