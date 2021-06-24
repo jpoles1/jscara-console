@@ -302,9 +302,10 @@ export default Vue.extend({
             reader.readAsText(file);
 		},
 		gcode_from_text(gcode: string) {
-			// Add homing seq to end of gco de
-			this.raw_gcode = gcode// + ["G0Z10", `G0X${this.scara_conv.scara_props.L1 + this.scara_conv.scara_props.L2}Y-${this.scara_conv.inner_rad}`, "G0Z0"].join("\n");
+			this.raw_gcode = gcode
 			this.regen_converted_gcode();
+			// Add homing seq to end of gcode
+			this.converted_gcode = this.converted_gcode.concat(["G0Z30", `G0X0Y0`, "G0Z0"])
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
