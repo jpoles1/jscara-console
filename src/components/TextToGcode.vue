@@ -74,8 +74,11 @@ export default Vue.extend({
                 if (err) {
                     alert("Font could not be loaded: " + err);
                 } else {
-                    const raw_path = font!.getPath(this.userText, 0, this.fontSize, this.fontSize).toPathData(2);
-                    const path_chunks = raw_path.split("Z") // Split on the "close path" cmd
+                    const raw_path = font!.getPath(this.userText, 0, this.fontSize, this.fontSize);
+                    const path_bounds = raw_path.getBoundingBox();
+                    const path_width = path_bounds.x2 - path_bounds.x1
+                    const path_str = raw_path.toPathData(2);
+                    const path_chunks = path_str.split("Z") // Split on the "close path" cmd
                     const lift_dist = 10; // # of mm to lift pen off page inbetween letters
                     let gcode = `G1Z${lift_dist}` // Start by lifting pen before moving to initial position
                     let lin_path = ""
@@ -86,6 +89,8 @@ export default Vue.extend({
                         let startpt = [undefined, undefined] as [number | undefined, number | undefined]
                         // Iterate over svg commands and convert to linearized versions of both GCode and SVG paths
                         let lineConsumer = (x1: number, y1: number, x2: number, y2: number, data: number) => {
+                            x1 = x1 - path_width / 2 
+                            x2 = x2 - path_width / 2
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
                             gcode_cmds.push(`G1 X${x2} Y${y2}`)
                             svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + this.x_offset + center_x} ${y2 + this.y_offset}`)
@@ -108,7 +113,6 @@ export default Vue.extend({
                         lin_path = lin_path + " " + svg_cmds.join(" ")
                     })
                     // Emit the linearized gcode to the parent component for sending to the SCARA arm
-                    console.log(gcode);
                     this.$emit("gcodegen", gcode)
                     // Clear out the canvas
                     const canvas = document.getElementById("canvas") as HTMLCanvasElement
