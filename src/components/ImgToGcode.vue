@@ -32,7 +32,7 @@
 
 <script lang="ts">
 import opentype from "opentype.js"
-import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/index.ts"
+import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/index"
 import SVGPath from "svgpath"
 import potrace from "potrace"
 import imgreduce from "image-blob-reduce"

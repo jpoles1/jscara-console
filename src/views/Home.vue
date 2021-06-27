@@ -54,6 +54,13 @@
 			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
 				Release
 			</v-btn>
+						<br>
+			<v-btn @click="write_serial('M106 S255\n')" style="transform: scale(0.85);">
+				Suck On
+			</v-btn>
+			<v-btn @click="write_serial('M106 S0\n')" style="transform: scale(0.85);">
+				Suck Off
+			</v-btn>
 			<div style="display: flex; align-items: stretch;">
 				<div class="jog-box">
 					<div class="jog-col">
