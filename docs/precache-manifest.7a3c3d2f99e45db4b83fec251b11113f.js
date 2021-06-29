@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "f94ef46af940fdf3767b",
+    "revision": "d333b5e6c44085059131",
     "url": "/jscara-console/css/app.a36202cd.css"
   },
   {
@@ -16,16 +16,20 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/jscara-console/fonts/GreatVibes-Regular.ttf"
   },
   {
-    "revision": "e79a2d7af30b64ab94df6871aacbdfd5",
+    "revision": "6e72f006592c214f5436af582b407a77",
     "url": "/jscara-console/index.html"
   },
   {
-    "revision": "f94ef46af940fdf3767b",
-    "url": "/jscara-console/js/app.3caff517.js"
+    "revision": "d333b5e6c44085059131",
+    "url": "/jscara-console/js/app.c406a6ed.js"
   },
   {
     "revision": "3ed0063161dd36b63861",
     "url": "/jscara-console/js/chunk-vendors.8e2442c7.js"
+  },
+  {
+    "revision": "3256c7949732689da3fc1089ece3358e",
+    "url": "/jscara-console/js/serialworker.d074fea6.worker.js"
   },
   {
     "revision": "d27606b5ae573e0e29465496b6fbfab5",

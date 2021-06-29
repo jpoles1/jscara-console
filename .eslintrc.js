@@ -5,8 +5,8 @@ module.exports = {
   },
   extends: ["plugin:vue/essential", "@vue/prettier", "@vue/typescript"],
 	rules: {
-		"no-console": process.env.NODE_ENV === "production" ? "error" : "off",
-		"no-debugger": process.env.NODE_ENV === "production" ? "error" : "off",
+		"no-console": process.env.NODE_ENV === "production" ? "warning" : "off",
+		"no-debugger": process.env.NODE_ENV === "production" ? "warning" : "off",
 		"no-constant-condition": "off",
 		"prettier/prettier": ["warning", { "useTabs": true, "printWidth": 140, "trailingComma": "es5" }],
 	},
