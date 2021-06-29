@@ -26,7 +26,6 @@
       "dom",
       "dom.iterable",
       "scripthost",
-      "webworker"
     ]
   },
   "include": [

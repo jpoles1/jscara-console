@@ -175,7 +175,9 @@
 <script lang="ts">
 
 import { WorkerMsg, WorkerCmd, MasterCmd } from "@/serialtypes";
-const serialworker = new Worker('!@/serialworker.ts', { type: 'module' });
+import Worker from "worker-loader!@/serialworker.ts";
+
+const serialworker = new Worker();
 
 const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

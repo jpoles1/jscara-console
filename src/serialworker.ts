@@ -1,8 +1,10 @@
 import { WorkerMsg, WorkerCmd, MasterCmd } from "@/serialtypes";
 
+const ctx: Worker = self as any;
+
 let send_buffer: string[] = [];
 
-addEventListener('message', event => {
+ctx.addEventListener('message', event => {
     const msg: WorkerMsg = event.data
     if (msg.type == MasterCmd.SerialConnect) {
         serial_connect();
@@ -22,14 +24,14 @@ addEventListener('message', event => {
 const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
  
 const serial_connect = async function() {
-    let port = (await (self.navigator as any).serial.getPorts())[0]
+    let port = (await ((ctx as any).navigator as any).serial.getPorts())[0]
     // Wait for the port to open.
     let port_open_error = "" as any;
     let attempting_to_connect = true;
     while (port_open_error != undefined) {
         port_open_error = undefined;
         await port.open({ baudRate: 250000 }).catch((e: any) => {
-            postMessage({ type: WorkerCmd.SerialError, data: `Failed to open serial connection: ${e}` } as WorkerMsg)
+            ctx.postMessage({ type: WorkerCmd.SerialError, data: `Failed to open serial connection: ${e}` } as WorkerMsg)
             //this.$toast(`Failed to open serial connection: ${e}`)
             port_open_error = e;
         });
@@ -43,7 +45,7 @@ const serial_connect = async function() {
         }
     }
     // Connected successfully
-    postMessage({ type: WorkerCmd.SerialConnected } as WorkerMsg)
+    ctx.postMessage({ type: WorkerCmd.SerialConnected } as WorkerMsg)
 
     // Setup Writer
     const encoder = new TextEncoderStream();
@@ -89,7 +91,7 @@ const serial_connect = async function() {
                 } else {
                     // Don't bother recording "ok" to serial log
                     recv_buffer = recv_buffer.replace("\n", "<br>")
-                    postMessage({ type: WorkerCmd.SerialRecv, data: recv_buffer});
+                    ctx.postMessage({ type: WorkerCmd.SerialRecv, data: recv_buffer});
                 }
                 // else if (this.recv_buffer.includes("error:")) {}
                 recv_buffer = "";
