@@ -73,9 +73,9 @@ const serial_connect = async function() {
                 writer.write(send_buffer.shift() + "\n");
                 //writer.releaseLock();
             }
-            /*else if((Date.now() - (last_resp || 0)) / 1000 > 1) {
-                writer.write("?\n");
-            }*/
+            else if((Date.now() - (last_resp || 0)) / 1000 > 1) {
+                ready_to_send = true;
+            }
         }
     }, 1)
 
@@ -88,7 +88,9 @@ const serial_connect = async function() {
                 if(recv_buffer.includes("ok")) {
                     last_resp = Date.now();
                     ready_to_send = true;
-                } else {
+                } 
+                recv_buffer = recv_buffer.replaceAll("ok", "");
+                if(recv_buffer.trim() != "") {
                     // Don't bother recording "ok" to serial log
                     recv_buffer = recv_buffer.replace("\n", "<br>")
                     ctx.postMessage({ type: WorkerCmd.SerialRecv, data: recv_buffer});
