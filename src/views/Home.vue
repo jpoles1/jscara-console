@@ -101,6 +101,7 @@
 						<v-btn @click="goto_point">Go To</v-btn>
 					</v-row>
 				</div>
+				<ClickToMove v-on:move="click_move"/>
 			</div>
 			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
 			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
@@ -185,6 +186,7 @@ const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms
 
 import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
+import ClickToMove from "@/components/ClickToMove.vue";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
 import TextToGcode from "@/components/TextToGcode.vue";
 import ImgToGcode from "@/components/ImgToGcode.vue";
@@ -192,6 +194,7 @@ import saveAs from "@/components/FileSaver"
 
 export default Vue.extend({
 	components: {
+		ClickToMove,
 		ScaraSim3D,
 		TextToGcode,
 		ImgToGcode,
@@ -231,6 +234,11 @@ export default Vue.extend({
 		},
 	},
 	methods: {
+		async click_move([x, y]: [number, number]) {
+			this.goto.x = x;
+			this.goto.y = y;
+			this.goto_point();
+		},
 		async goto_point() {
 			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F20000\n`
 			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
