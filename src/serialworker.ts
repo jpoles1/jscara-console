@@ -24,7 +24,9 @@ ctx.addEventListener('message', event => {
 const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
  
 const serial_connect = async function() {
-    let port = (await ((ctx as any).navigator as any).serial.getPorts())[0]
+    const port_list = (await ((ctx as any).navigator as any).serial.getPorts());
+    //console.log(port_list)
+    let port = port_list[0]
     // Wait for the port to open.
     let port_open_error = "" as any;
     let attempting_to_connect = true;

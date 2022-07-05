@@ -296,6 +296,7 @@ export default Vue.extend({
 			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data } as WorkerMsg)
 		},
 		async serial_connect() {
+			await (navigator as any).serial.requestPort()
 			serialworker.postMessage({ type: MasterCmd.SerialConnect } as WorkerMsg)
 		},
 		regen_converted_gcode() {
