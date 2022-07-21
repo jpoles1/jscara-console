@@ -63,7 +63,7 @@ export class ScaraConverter {
     error_reporter: (e: string) => void;
     constructor(error_reporter?: (e: string) => void) {
         this.x_offset = 0;
-        this.y_offset = 60;
+        this.y_offset = 100;
         this.inner_rad = 0;
         this.skew =  0;
         this.feed_rate = 2000;
@@ -215,32 +215,13 @@ export class ScaraConverter {
                     return [cmd_list, next_pos]; 
                 }
                 if ((current_pos.X === undefined && current_pos.Y === undefined) || rapid){
-                    const scara_pos = this.map_cartesian_to_scara(this.translate(next_pos));
-                    cmd_list.push(`G0 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.scara_props.max_speed}`)
+                    const np = this.translate(current_pos);
+                    cmd_list.push(`G0 X${np.X} Y${np.Y} Z${np.Z} F${np.F}`)
                     return [cmd_list, next_pos]; 
                 }
                 else {
-                    let travel_dist = Math.sqrt((next_pos.X!-current_pos.X!)**2+(next_pos.Y!-current_pos.Y!)**2)
-                    let mid_pos: EffectorPos = {
-                        X: current_pos.X,
-                        Y: current_pos.Y,
-                        Z: current_pos.Z,
-                    }
-                    while (travel_dist > this.max_seg_length) {
-                        mid_pos = {
-                            X: mid_pos.X! + (next_pos.X! - mid_pos.X!)*this.max_seg_length/travel_dist,
-                            Y: mid_pos.Y! + (next_pos.Y! - mid_pos.Y!)*this.max_seg_length/travel_dist,
-                            Z: mid_pos.Z! + (next_pos.Z! - mid_pos.Z!)*this.max_seg_length/travel_dist,
-                        }
-                        const scara_pos = this.map_cartesian_to_scara(this.translate(mid_pos));
-                        const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, next_pos.F!)
-                        cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${scara_feedrate}`)
-                        //cmd_list.push(`G1 X${scara_pos.a1} Y${scara_pos.a2} Z${scara_pos.Z} F${this.scara_props.max_speed}`)
-                        travel_dist = Math.sqrt((next_pos.X!-mid_pos.X!)**2+(next_pos.Y!-mid_pos.Y!)**2)
-                    }
-                    const final_scara_pos = this.map_cartesian_to_scara(this.translate(mid_pos));
-                    const scara_feedrate = this.cartesian_to_scara_feedrate(mid_pos, next_pos, next_pos.F!)
-                    cmd_list.push(`G1 X${final_scara_pos.a1} Y${final_scara_pos.a2} Z${final_scara_pos.Z} F${scara_feedrate}`)
+                    const np = this.translate(current_pos);
+                    cmd_list.push(`G1 X${np.X} Y${np.Y} Z${np.Z} F${np.F}`)
                     //cmd_list.push(`G1 X${final_scara_pos.a1} Y${final_scara_pos.a2} Z${final_scara_pos.Z} F${this.scara_props.max_speed}`)
                     return [cmd_list, next_pos];
                 }
@@ -255,11 +236,6 @@ export class ScaraConverter {
         gcode_string = gcode_string.replace(/[N]\d+ /g, "");
         let gcode_lines = gcode_string.split("\n");
         let current_pos: EffectorPos = {X: undefined, Y: undefined, Z: 0, F: this.feed_rate};
-        // GRBL 0.8c compatible GCODES for setting steps such that each full step is the equivalent of 1 degree!
-        let init_gcode =  [
-            `M92 X${ (this.scara_props.a1_steps_per_rev/360) * (this.scara_props.a1_receiver_teeth/this.scara_props.a1_driver_teeth) }`, 
-            `M92 Y${ (this.scara_props.a2_steps_per_rev/360) * (this.scara_props.a2_receiver_teeth/this.scara_props.a2_driver_teeth) * (this.scara_props.a2_secondary_receiver_teeth/this.scara_props.a2_receiver_teeth) }`
-        ];
         let converted_gcode = gcode_lines.reduce((agg: string[], next_cmd: string) => {
             let cmd_list: string[] = [];
             [cmd_list, current_pos] = this.plot_scara_move(next_cmd, current_pos);

@@ -1,3 +1,5 @@
+pull_submodules:
+	git submodule update --init --recursive
 run:
 	npm run serve
 build:

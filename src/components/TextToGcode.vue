@@ -34,13 +34,13 @@ export default Vue.extend({
         return {
             plot_width: 500, 
             plot_height: 300,
-            userText: "Jordan Poles",
-            fontName: "GreatVibes-Regular.ttf",
+            userText: "SCARA",
+            fontName: "ChunkFive-Regular.otf",
             fontSize: 40,
             userInputDebounce: 0,
             fontOptions: [
-                {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
                 {name: "ChunkFive (block)", file: "ChunkFive-Regular.otf"},
+                {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
             ],
         }
     },
@@ -92,16 +92,17 @@ export default Vue.extend({
                             x1 = x1 - path_width / 2 
                             x2 = x2 - path_width / 2
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
-                            gcode_cmds.push(`G1 X${x2} Y${y2}`)
+                            gcode_cmds.push(`G1X${x2 + this.x_offset}Y${y2 + this.y_offset}`)
                             svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + this.x_offset + center_x} ${y2 + this.y_offset}`)
                         }
                         const al = new AdaptiveLinearization(lineConsumer);
                         svgpath.iterate(al.svgPathIterator);
                         // Place pen down on page at the start of each path
                         gcode_cmds.splice(1, 0, "G1Z0");
-                        if(startpt[0] !=undefined && startpt[1] != undefined) {
+                        //Skip any undefined pts
+                        if(startpt[0] != undefined && startpt[1] != undefined && !isNaN(startpt[0]) && !isNaN(startpt[1])) {
                             // Move to start point to close path!
-                            gcode_cmds.push(`G1X${startpt[0]}Y${startpt[1]}`);
+                            gcode_cmds.push(`G1X${startpt[0] + this.x_offset}Y${startpt[1] + this.y_offset}`);
                         }
                         // And then lift it when we are done
                         gcode_cmds.push(`G1Z${lift_dist}`)

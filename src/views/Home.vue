@@ -186,6 +186,7 @@ const async_wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms
 
 import Vue from "vue";
 import {ScaraConverter} from "@/ScaraConverter";
+
 import ClickToMove from "@/components/ClickToMove.vue";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
 import TextToGcode from "@/components/TextToGcode.vue";
@@ -240,32 +241,18 @@ export default Vue.extend({
 			this.goto_point();
 		},
 		async goto_point() {
-			const raw_gcode = `G1 X${this.goto.x} Y${this.goto.y} F20000\n`
-			const scara_gcode = this.scara_conv.convert_cartesian_to_scara(raw_gcode);
-			await this.write_serial(scara_gcode + "\n");
+			const raw_gcode = `G0 X${this.goto.x} Y${this.goto.y} F20000\n`
+			await this.write_serial(raw_gcode);
 		},
 		async home_scara(fold_up=false) {
+			
 			const fold_up_cmd_lines = [
-				"G0 Z30 F5000",
-				"G92 X0 Y0",
-				"G0 Y25",
-				"G28 X",
-				"G28 Y",
-				"G0 Y-30",
-				"G0 X-10",
-				"G92 X0 Y0",
+				"G28"
 			]
 			const home_cmd_lines = [
-				"G0 Z30 F5000",
-				"G92 X0 Y0",
-				"G0 Y30",
-				"G28 X",
-				"G28 Y",
-				`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 90}`,
-				`G0 X-${this.scara_conv.scara_props.x_estop_offset}`,
-				`G0 Y-${this.scara_conv.scara_props.y_estop_offset + 180}`,
-				"G92 X0 Y0",
-				"G1 Z0 F5000",
+				"G28",
+				"G0 F20000",
+				"G0 X120 Y120 F20000",
 			];
 			const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
 			for (const gcode_line_index in cmd_lines) {
@@ -308,7 +295,8 @@ export default Vue.extend({
 			serialworker.postMessage({ type: MasterCmd.SerialConnect } as WorkerMsg)
 		},
 		regen_converted_gcode() {
-			this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
+			//this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
+			this.converted_gcode = this.raw_gcode.split("\n")
 		},
 		load_gcode_file(file: File) {
 			if (file === null) return
@@ -323,7 +311,8 @@ export default Vue.extend({
 			this.raw_gcode = gcode
 			this.regen_converted_gcode();
 			// Add homing seq to end of gcode
-			this.converted_gcode = this.converted_gcode.concat(["G0Z30", `G0X0Y0`, "G0Z0"])
+			// TODO: Consider moving arm out of the way when completed, perhaps using relative move (eg: X+20 Y+20)?
+			this.converted_gcode = this.converted_gcode.concat(["G0Z10"])
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
