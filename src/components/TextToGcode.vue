@@ -92,7 +92,7 @@ export default Vue.extend({
                             x1 = x1 - path_width / 2 
                             x2 = x2 - path_width / 2
                             if(gcode_cmds.length == 0) startpt = [x2, y2]
-                            gcode_cmds.push(`G1X${x2 + this.x_offset}Y${y2 + this.y_offset}`)
+                            gcode_cmds.push(`G1X${-(x2 + this.x_offset)}Y${y2 + this.y_offset}`)
                             svg_cmds.push(`${svg_cmds.length > 0 ? "L" : "M"} ${x2 + this.x_offset + center_x} ${y2 + this.y_offset}`)
                         }
                         const al = new AdaptiveLinearization(lineConsumer);
@@ -102,7 +102,7 @@ export default Vue.extend({
                         //Skip any undefined pts
                         if(startpt[0] != undefined && startpt[1] != undefined && !isNaN(startpt[0]) && !isNaN(startpt[1])) {
                             // Move to start point to close path!
-                            gcode_cmds.push(`G1X${startpt[0] + this.x_offset}Y${startpt[1] + this.y_offset}`);
+                            gcode_cmds.push(`G1X${-(startpt[0] + this.x_offset)}Y${startpt[1] + this.y_offset}`);
                         }
                         // And then lift it when we are done
                         gcode_cmds.push(`G1Z${lift_dist}`)
