@@ -75,7 +75,8 @@ const serial_connect = async function() {
                 writer.write(send_buffer.shift() + "\n");
                 //writer.releaseLock();
             }
-            else if((Date.now() - (last_resp || 0)) / 1000 > 1) {
+            else if((Date.now() - (last_resp || 0)) / 1000 > 1000) {
+                console.log("no resp")
                 ready_to_send = true;
             }
         }
