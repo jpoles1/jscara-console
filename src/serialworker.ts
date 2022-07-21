@@ -92,7 +92,7 @@ const serial_connect = async function() {
                     last_resp = Date.now();
                     ready_to_send = true;
                 } 
-                recv_buffer = recv_buffer.replaceAll("ok", "");
+                recv_buffer = recv_buffer.replace(/ok/g, "");
                 if(recv_buffer.trim() != "") {
                     // Don't bother recording "ok" to serial log
                     recv_buffer = recv_buffer.replace("\n", "<br>")
