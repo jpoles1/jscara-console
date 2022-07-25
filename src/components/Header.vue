@@ -21,7 +21,7 @@
 				</div>
 			</span>
 			<v-toolbar-title class="headline">
-				<router-link to="/" class="header-logo" style="text-decoration: none;">
+				<router-link to="/" class="header-logo" style="text-decoration: none; color: white;">
 					<span>JSCARA</span>
 				</router-link>
 			</v-toolbar-title>

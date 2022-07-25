@@ -1,113 +1,115 @@
 <template>
-	<div id="serial-pane" style="margin-left: 24px;">
+	<v-container id="serial-pane" style="padding-left: 24px;">
 		<div id="notSupported">
 			Sorry, <b>Web Serial</b> is not supported on this device, make sure you're running Chrome 78 or later and have enabled the
 			<code>#enable-experimental-web-platform-features</code> flag in
 			<code>chrome://flags</code>
 		</div>
-		<div v-if="!serial_connected">
-			<v-btn @click="serial_connect" v-if="!attempting_to_connect" color="primary">
-				Connect to SCARA
-			</v-btn>
-			<v-btn @click="cancel_connect = true" v-else color="error">
-				Cancel Connect to SCARA
-			</v-btn>
-		</div>
-		<div v-else style="display: flex; align-items: center;">
-			<v-text-field label="GCODE Command" v-model="cmd" outlined style="max-width: 500px; margin-right: 30px;" 
-			autocomplete="off"
-			@keyup.enter.native="write_cmd_to_serial"  @keyup.up.native="recover_prev_cmd(1)" @keyup.down.native="recover_prev_cmd(-1)"/> 
-			<v-btn @click="write_cmd_to_serial" style="transform: scale(1.2);">
-				Send
-			</v-btn>
-		</div>
-		<div v-if="serial_connected">
-			<v-btn @click="origin_scara" style="transform: scale(0.85);">
-				Origin
-			</v-btn>
-			<v-btn @click="write_serial('G92 X0 Y0\n')" style="transform: scale(0.85);">
-				XY=0
-			</v-btn>
-			<v-btn @click="write_serial('G92 Z0\n')" style="transform: scale(0.85);">
-				Z=0
-			</v-btn>
-			<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
-				XYZ=0
-			</v-btn>
-			<br>
-			<v-btn @click="clear_buffer" style="transform: scale(0.85);">
-				Clear Buffer
-			</v-btn>
-			<v-btn @click="write_serial('M410\n'); ready_to_send=true" style="transform: scale(0.85);">
-				Quickstop
-			</v-btn>
-			<v-btn @click="write_serial('M112\n')" style="transform: scale(0.85);">
-				E-Stop
-			</v-btn>
-			<br>
-			<v-btn @click="home_scara()" style="transform: scale(0.85);">
-				Home
-			</v-btn>
-			<v-btn @click="home_scara(true)" style="transform: scale(0.85);">
-				Fold-Up
-			</v-btn>
-			<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
-				Release
-			</v-btn>
-						<br>
-			<v-btn @click="write_serial('M106 S255\n')" style="transform: scale(0.85);">
-				Suck On
-			</v-btn>
-			<v-btn @click="write_serial('M106 S0\n')" style="transform: scale(0.85);">
-				Suck Off
-			</v-btn>
-			<div style="display: flex; align-items: stretch;">
-				<div class="jog-box">
-					<div class="jog-col">
-						<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
-						<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
-							+X
-						</v-btn>
-						<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
-							-X
-						</v-btn>
-					</div>
-					<div class="jog-col">
-						<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
-						<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
-							+Y
-						</v-btn>
-						<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
-							-Y
-						</v-btn>
-					</div>
-					<div class="jog-col">
-						<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
-						<v-btn @click="write_serial('G91\nG0 Z' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
-							+Z
-						</v-btn>
-						<v-btn @click="write_serial('G91\nG0 Z-' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
-							-Z
-						</v-btn>
-					</div>
-				</div>
-				<div style="width: 240px; margin: 10px 20px; padding: 16px 30px; background-color: #ffb8b8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-direction: column" >
-					<v-row>
-						<v-text-field type="number" v-model.number="goto.x" label="X Position" style="width: 100px;"/>
-						<div>&nbsp;&nbsp;&nbsp;</div>
-						<v-text-field type="number" v-model.number="goto.y" label="Y Position" style="width: 100px;"/>
-					</v-row>
-					<v-row justify="center">
-						<v-btn @click="goto_point">Go To</v-btn>
-					</v-row>
-				</div>
-				<ClickToMove v-on:move="click_move"/>
+		<v-card style="padding: 14px; margin-bottom: 12px;">
+			<div v-if="!serial_connected">
+				<v-btn @click="serial_connect" v-if="!attempting_to_connect" color="primary">
+					Connect to SCARA
+				</v-btn>
+				<v-btn @click="cancel_connect = true" v-else color="error">
+					Cancel Connect to SCARA
+				</v-btn>
 			</div>
-		</div>
+			<div v-else style="display: flex; align-items: center;">
+				<v-text-field label="GCODE Command" v-model="cmd" outlined style="max-width: 500px; margin-right: 30px;" 
+				autocomplete="off"
+				@keyup.enter.native="write_cmd_to_serial"  @keyup.up.native="recover_prev_cmd(1)" @keyup.down.native="recover_prev_cmd(-1)"/> 
+				<v-btn @click="write_cmd_to_serial" style="transform: scale(1.2);">
+					Send
+				</v-btn>
+			</div>
+			<div v-if="serial_connected">
+				<v-btn @click="origin_scara" style="transform: scale(0.85);">
+					Origin
+				</v-btn>
+				<v-btn @click="write_serial('G92 X0 Y0\n')" style="transform: scale(0.85);">
+					XY=0
+				</v-btn>
+				<v-btn @click="write_serial('G92 Z0\n')" style="transform: scale(0.85);">
+					Z=0
+				</v-btn>
+				<v-btn @click="write_serial('G92 X0 Y0 Z0\n')" style="transform: scale(0.85);">
+					XYZ=0
+				</v-btn>
+				<br>
+				<v-btn @click="clear_buffer" style="transform: scale(0.85);">
+					Clear Buffer
+				</v-btn>
+				<v-btn @click="write_serial('M410\n'); ready_to_send=true" style="transform: scale(0.85);">
+					Quickstop
+				</v-btn>
+				<v-btn @click="write_serial('M112\n')" style="transform: scale(0.85);">
+					E-Stop
+				</v-btn>
+				<br>
+				<v-btn @click="home_scara()" style="transform: scale(0.85);">
+					Home
+				</v-btn>
+				<v-btn @click="home_scara(true)" style="transform: scale(0.85);">
+					Fold-Up
+				</v-btn>
+				<v-btn @click="write_serial('M18\n')" style="transform: scale(0.85);">
+					Release
+				</v-btn>
+							<br>
+				<v-btn @click="write_serial('M106 S255\n')" style="transform: scale(0.85);">
+					Suck On
+				</v-btn>
+				<v-btn @click="write_serial('M106 S0\n')" style="transform: scale(0.85);">
+					Suck Off
+				</v-btn>
+				<div style="display: flex; align-items: stretch;">
+					<div class="jog-box">
+						<div class="jog-col">
+							<v-text-field v-model.number="jog_inc['x']" type="number" style="text-align: center;" step=5 />
+							<v-btn @click="write_serial('G91\nG0 X' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+								+X
+							</v-btn>
+							<v-btn @click="write_serial('G91\nG0 X-' + jog_inc['x'] + '\nG90\n')" class="jog-btn">
+								-X
+							</v-btn>
+						</div>
+						<div class="jog-col">
+							<v-text-field v-model.number="jog_inc['y']" type="number" style="text-align: center;" step=5 />
+							<v-btn @click="write_serial('G91\nG0 Y' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+								+Y
+							</v-btn>
+							<v-btn @click="write_serial('G91\nG0 Y-' + jog_inc['y'] + '\nG90\n')" class="jog-btn">
+								-Y
+							</v-btn>
+						</div>
+						<div class="jog-col">
+							<v-text-field v-model.number="jog_inc['z']" type="number" style="text-align: center;" step=5 />
+							<v-btn @click="write_serial('G91\nG0 Z' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
+								+Z
+							</v-btn>
+							<v-btn @click="write_serial('G91\nG0 Z-' + Math.max(1, jog_inc['z']) + '\nG90\n')" class="jog-btn">
+								-Z
+							</v-btn>
+						</div>
+					</div>
+					<div style="width: 240px; margin: 10px 20px; padding: 16px 30px; background-color: #db7676; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-direction: column" >
+						<v-row>
+							<v-text-field type="number" v-model.number="goto.x" label="X Position" style="width: 100px;"/>
+							<div>&nbsp;&nbsp;&nbsp;</div>
+							<v-text-field type="number" v-model.number="goto.y" label="Y Position" style="width: 100px;"/>
+						</v-row>
+						<v-row justify="center">
+							<v-btn @click="goto_point">Go To</v-btn>
+						</v-row>
+					</div>
+					<ClickToMove v-on:move="click_move"/>
+				</div>
+			</div>
+			<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 100%; overflow-y: scroll; border: 1px dotted #333;">
+				<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
+			</div>
 
-		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
-			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
-		</div>
+		</v-card>
 		<v-expansion-panels multiple >
 			<v-expansion-panel>
 				<v-expansion-panel-header color="#333">
@@ -149,7 +151,7 @@
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 		</v-expansion-panels>
-	</div>
+	</v-container>
 </template>
 
 <script lang="ts">
@@ -318,7 +320,7 @@ export default Vue.extend({
 	.jog-box {
 		display: flex;
 		align-items: center;
-		background-color: lightblue;
+		background-color: rgb(21, 123, 156);
 		width: 240px;
 		justify-content: center;
 		padding: 16px;

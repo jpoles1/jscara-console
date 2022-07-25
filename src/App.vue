@@ -1,5 +1,5 @@
 <template>
-	<v-app dark>
+	<v-app>
 		<Header />
 		<v-content style="margin-top: 20px;">
 			<router-view></router-view>

@@ -1,10 +1,11 @@
 <template>
 <div>
-    <v-tabs v-model="active_tab" @change="gcode_convert_debounce">
+    <v-card color="#333" style="padding-bottom: 10px;">
+    <v-tabs v-model="active_tab" @change="gcode_convert_debounce" background-color="grey darken-4" style="color: white">
         <v-tab key="txt">Text</v-tab>
         <v-tab key="img">Image</v-tab>
 
-        <v-tabs-items v-model="active_tab">
+        <v-tabs-items v-model="active_tab" style="background-color: #333; padding: 10px;">
             <v-tab-item key="txt">
                 <div style="width: 500px; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: space-around;">
                     <v-text-field v-model="userText" label="Custom Text" @change="gcode_convert_debounce"/>
@@ -13,15 +14,16 @@
                 </div>
             </v-tab-item>
             <v-tab-item key="img">
-                <div style="width: 300px; max-width: 100%">
+                <div style="width: 500px; max-width: 100%">
                     <v-file-input @change="load_img_file" placeholder="Upload Image" accept=".svg,.png,.jpg,.jpeg"/>
                     <div v-if="imageType == 'photo'">
                         <br>
-                        <v-radio-group v-model="photo_mode" @change="photo_to_svg">
+                        <v-radio-group v-model="photo_mode" @change="photo_to_svg" row>
                             <v-radio value="squiggle" label="Squiggle"/>
                             <v-radio value="tsp" label="Traveling Salesman"/>
                             <v-radio value="potrace" label="Potrace"/>
                         </v-radio-group>
+                        <br/>
                         <div v-if="photo_mode == 'potrace'">
                             <v-slider v-model="potrace_params.threshold" thumb-label="always" @change="photo_to_svg" min=-1 max=255  label="Threshold">
                                 <template v-slot:append>
@@ -57,8 +59,7 @@
 
         </v-tabs-items>
     </v-tabs>
-
-    <div :style="{width: `${plot_width+2}px`, height: `${plot_height+2}px`, position: 'relative', overflow: 'hidden'}">
+    <div :style="{width: `${plot_width+2}px`, height: `${plot_height+2}px`, position: 'relative', overflow: 'hidden', margin: '10px', 'background-color': '#666'}">
         <drr
             :x="svg_x"
             :y="svg_y"
@@ -74,6 +75,7 @@
         <canvas id="render-workarea" :width="plot_width" :height="plot_height" style="border: 1px solid black;" />
     </div>
     <div class="visuallyhidden" id="svg-tester"/>
+    </v-card>
 </div>
 
 </template>

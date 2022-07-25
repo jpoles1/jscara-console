@@ -10,6 +10,6 @@ Vue.use(VuetifyToast, {
 	color: "#403e4d",
 });
 
-const opts = {};
-
-export default new Vuetify(opts);
+export default new Vuetify({
+	theme: { dark: true },
+});
