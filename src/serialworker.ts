@@ -3,6 +3,12 @@ import { WorkerMsg, WorkerCmd, MasterCmd } from "@/serialtypes";
 const ctx: Worker = self as any;
 
 let send_buffer: string[] = [];
+let job = {
+    active: false,
+    gcode_lines: 0,
+    lines_sent: 0,
+    prog_line_interval: 20, //Number of lines to send between each progress update
+};
 
 ctx.addEventListener('message', event => {
     const msg: WorkerMsg = event.data
@@ -14,9 +20,17 @@ ctx.addEventListener('message', event => {
     }
     else if (msg.type == MasterCmd.ReplaceBuffer) {
         send_buffer = msg.data;
+        job.active = false;
     }
     else if (msg.type == MasterCmd.ClearBuffer) {
         send_buffer = [];
+        job.active = false;
+    }
+    else if (msg.type == MasterCmd.StartJob) {
+        send_buffer = msg.data;
+        job.gcode_lines = send_buffer.length;
+        job.lines_sent = 0;
+        job.active = true;
     }
     
 });
@@ -73,6 +87,12 @@ const serial_connect = async function() {
                 last_send = Date.now();
                 ready_to_send = false;
                 writer.write(send_buffer.shift() + "\n");
+                job.lines_sent++;
+                if(job.lines_sent == job.gcode_lines) {
+                    ctx.postMessage({ type: WorkerCmd.JobProg, data: 100 })
+                } else if(job.lines_sent % job.prog_line_interval == 0) {
+                    ctx.postMessage({ type: WorkerCmd.JobProg, data: 100 * job.lines_sent / job.gcode_lines})
+                }
                 //writer.releaseLock();
             }
             else if((Date.now() - (last_resp || 0)) / 1000 > 1000) {

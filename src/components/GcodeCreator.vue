@@ -6,10 +6,10 @@
 
         <v-tabs-items v-model="active_tab">
             <v-tab-item key="txt">
-                <div style="width: 300px; max-width: 100%">
+                <div style="width: 500px; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: space-around;">
                     <v-text-field v-model="userText" label="Custom Text" @change="gcode_convert_debounce"/>
                     <v-text-field v-model.number="fontSize" type="number" label="Font Size" @change="gcode_convert_debounce"/>
-                    <v-select v-model="fontName" :items="fontOptions" item-text="name" item-value="file" @change="gcode_convert_debounce"/>
+                    <v-select v-model="fontName" :items="fontOptions" label="Font" item-text="name" item-value="file" @change="gcode_convert_debounce"/>
                 </div>
             </v-tab-item>
             <v-tab-item key="img">
@@ -18,8 +18,8 @@
                     <div v-if="imageType == 'photo'">
                         <br>
                         <v-radio-group v-model="photo_mode" @change="photo_to_svg">
-                            <v-radio value="tsp" label="Traveling Salesman"/>
                             <v-radio value="squiggle" label="Squiggle"/>
+                            <v-radio value="tsp" label="Traveling Salesman"/>
                             <v-radio value="potrace" label="Potrace"/>
                         </v-radio-group>
                         <div v-if="photo_mode == 'potrace'">
@@ -42,10 +42,14 @@
                             <v-slider v-model="squiggle_config.spacing" thumb-label="always" @change="photo_to_svg" min=0.5 max=3 step="0.1" label="Sampling"/>
                         </div>
                         <div v-if="photo_mode == 'tsp'">
-                            <v-slider v-model="tsp_config.resolution" thumb-label="always" @change="photo_to_svg" min=5 max=30 label="Resolution"/>
-                            <v-slider v-model="tsp_config.contrast" thumb-label="always" @change="photo_to_svg" min=0 max=100 step=5 label="Contrast"/>
-                            <v-slider v-model="tsp_config.whiteCutoff" thumb-label="always" @change="photo_to_svg" min=0 max=255 step=5 label="White Cutoff"/>
-                            <v-checkbox v-model="tsp_config.invert"  @change="photo_to_svg" label="Invert"/>
+                            <v-slider v-model="tsp_config.resolution" thumb-label="always" min=5 max=30 label="Resolution" @change="tsp_config.auto_regen ? photo_to_svg() : undefined" :disabled="tsp_config.in_progress"/>
+                            <v-slider v-model="tsp_config.contrast" thumb-label="always" min=0 max=100 step=5 label="Contrast" @change="tsp_config.auto_regen ? photo_to_svg() : undefined" :disabled="tsp_config.in_progress"/>
+                            <v-slider v-model="tsp_config.whiteCutoff" thumb-label="always" min=0 max=255 step=5 label="White Cutoff"  @change="tsp_config.auto_regen ? photo_to_svg() : undefined"  :disabled="tsp_config.in_progress"/>
+                            <v-checkbox v-model="tsp_config.invert" label="Invert" @change="tsp_config.auto_regen ? photo_to_svg() : undefined"/>
+                            <v-checkbox v-model="tsp_config.auto_regen" label="Auto Regen"/>
+                            <v-btn v-show="!tsp_config.auto_regen" label="Regen" @click="photo_to_svg">
+                                Regenerate
+                            </v-btn>
                         </div>
                     </div>
                 </div>
@@ -115,7 +119,7 @@ export default Vue.extend({
                 {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
             ],
 
-            photo_mode: "tsp",
+            photo_mode: "squiggle",
             photo_upload_max_dim: 500,
             potrace_params: {
                 threshold: -1,
@@ -141,6 +145,8 @@ export default Vue.extend({
                 lineWidth: 4,
                 fg: "black",
                 bg: "white",
+                auto_regen: false,
+                in_progress: false,
             },
 
             plot_scale: plot_scale,
@@ -329,8 +335,10 @@ export default Vue.extend({
             }
             if (this.photo_mode == "tsp") {
                 OneLineClient.setImage(this.raw_photo);
+                this.tsp_config.in_progress = true;
                 OneLineClient.onResult = ((d: any) => {
                     const raw_svg = d.result
+                    this.tsp_config.in_progress = false;
                     const svgdoc = new DOMParser().parseFromString(raw_svg, "image/svg+xml");
                     replaceChildren(document.getElementById("svg-tester")!, svgdoc.documentElement);
                     this.set_svg_viewport();

@@ -8,10 +8,12 @@ export enum MasterCmd {
     PushToBuffer,
     ReplaceBuffer,
     ClearBuffer,
+    StartJob,
 }
 
 export enum WorkerCmd {
     SerialConnected,
     SerialError,
     SerialRecv,
+    JobProg,
 }

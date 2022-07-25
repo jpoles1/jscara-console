@@ -104,6 +104,7 @@
 				<ClickToMove v-on:move="click_move"/>
 			</div>
 		</div>
+
 		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
@@ -115,11 +116,15 @@
 				<v-expansion-panel-content>
 					<GcodeCreator v-on:gcodegen="gcode_from_gen"/>
 					<br>
-					<v-btn @click="send_converted_gcode" v-if="gcode.length > 0">
-						Send Converted GCODE
+					<v-progress-linear v-if="job_prog != undefined" v-model="job_prog" height="25" style="max-width: 400px;">
+						<strong>{{ Math.round((job_prog + Number.EPSILON) * 10 ** 2) / 10 ** 2 }}%</strong>
+					</v-progress-linear>
+					<br>
+					<v-btn @click="send_gcode_job" v-if="gcode.length > 0">
+						Send GCODE
 					</v-btn>
 					<v-btn @click="save_gcode(gcode.join('\n'))" v-if="gcode.length > 0">
-						Save Converted GCODE
+						Save GCODE
 					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
@@ -130,7 +135,7 @@
 				<v-expansion-panel-content>
 					<v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
 					<br>
-					<v-btn @click="send_converted_gcode" v-if="gcode.length > 0">
+					<v-btn @click="send_gcode_job" v-if="gcode.length > 0">
 						Send Converted GCODE
 					</v-btn>
 				</v-expansion-panel-content>
@@ -140,7 +145,7 @@
 					SCARA Sim
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<ScaraSim3D :uploaded_gcode="gcode.join('\n')" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+					<ScaraSim3D :uploaded_gcode="gcode.join('\n')"/>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 		</v-expansion-panels>
@@ -179,7 +184,6 @@ export default Vue.extend({
 			ready_to_send: true,
 			last_resp: undefined as number | undefined,
 			send_buffer_interval: undefined as any,
-			scara_conv: new ScaraConverter((e: string) => {this.$toast(e, {x: "center", color: "red"})}),
 			send_log: [] as string[],
 			send_log_index: 0,
 			recv_buffer: "",
@@ -193,6 +197,7 @@ export default Vue.extend({
 			reader: undefined as ReadableStreamDefaultReader<any> | undefined,
 			writer: undefined as WritableStreamDefaultWriter<any> | undefined,
 			regen_debounce: 0,
+			job_prog: undefined as number | undefined,
 		};
 	},
 	methods: {
@@ -248,7 +253,7 @@ export default Vue.extend({
 			this.cmd = "";
 		},
 		async write_serial(data: string) {
-			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data } as WorkerMsg)
+			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: [data] } as WorkerMsg)
 		},
 		async serial_connect() {
 			await (navigator as any).serial.requestPort()
@@ -265,7 +270,7 @@ export default Vue.extend({
 		gcode_from_gen(gcode: string[]) {
 			// Add homing seq to end of gcode
 			// TODO: Consider moving arm out of the way when completed, perhaps using relative move (eg: X+20 Y+20)?
-			this.gcode = ["G28", "G0 X120 Y120 F20000"].concat(gcode, ["G0Z10"]).filter((x) => x.length > 0)
+			this.gcode = ["G28 O", "G0 Z10 X120 Y120 F20000"].concat(gcode, ["G0Z10"]).filter((x) => x.length > 0)
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
@@ -274,10 +279,9 @@ export default Vue.extend({
 			serialworker.postMessage({ type: MasterCmd.ClearBuffer } as WorkerMsg)
 			this.ready_to_send = true;
 		},
-		async send_converted_gcode() {
-			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: this.gcode})
-			//this.send_buffer = this.send_buffer.concat(this.converted_gcode);
-			//this.write_next_in_buffer_to_serial();
+		async send_gcode_job() {
+			serialworker.postMessage({ type: MasterCmd.StartJob, data: this.gcode})
+			this.job_prog = 0;
 		}
 	},
 	mounted() {
@@ -294,7 +298,12 @@ export default Vue.extend({
 				this.serial_log.unshift(msg.data)
 			}
 			else if (msg.type == WorkerCmd.JobProg) {
-				this.serial_log.unshift(msg.data)
+				if(msg.data == 100) {
+					this.job_prog = undefined
+					this.$toast("Job Complete!", {x: "center", color: "green"})			
+				} else {
+					this.job_prog = msg.data
+				}
 			}
 			else if (msg.type == WorkerCmd.SerialError) {
 				this.$toast(msg.data, {x: "center", color: "red"})			
