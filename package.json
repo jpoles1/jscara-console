@@ -10,6 +10,7 @@
     "test:watch": "vue-cli-service test:unit --watch"
   },
   "dependencies": {
+    "@minogin/vue-drag-resize-rotate": "^1.0.5",
     "@types/d3": "^5.7.2",
     "adaptive-linearization": "^1.0.3",
     "core-js": "^3.4.3",

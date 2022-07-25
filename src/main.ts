@@ -4,6 +4,7 @@ import router from "./router";
 import store from "./store";
 import "./registerServiceWorker";
 import vuetify from "./plugins/vuetify";
+import drr from '@minogin/vue-drag-resize-rotate'
 
 Vue.config.productionTip = false;
 
@@ -19,6 +20,8 @@ Vue.config.ignoredElements = [
 	'a-cylinder',
 	'a-plane'
 ]
+
+Vue.component('drr', drr)
 
 new Vue({
 	router,

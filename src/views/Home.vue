@@ -109,13 +109,13 @@
 		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
 		</div>
-		<v-expansion-panels>
+		<v-expansion-panels multiple >
 			<v-expansion-panel>
 				<v-expansion-panel-header color="#333">
-					Text 🢂 SCARA
+					GCode Creator
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<TextToGcode v-on:gcodegen="gcode_from_text" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+					<GcodeCreator v-on:gcodegen="gcode_from_text"/>
 					<br>
 					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
 						Send Converted GCODE
@@ -125,24 +125,6 @@
 					</v-btn>
 					<v-btn @click="save_gcode(converted_gcode.join('\n'))" v-if="converted_gcode.length > 0">
 						Save Converted GCODE
-					</v-btn>
-				</v-expansion-panel-content>
-			</v-expansion-panel>
-			<v-expansion-panel>
-				<v-expansion-panel-header color="#333">
-					Image 🢂 SCARA	
-				</v-expansion-panel-header>
-				<v-expansion-panel-content>
-					<ImgToGcode v-on:gcodegen="gcode_from_text"/>
-					<br>
-					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
-						Send Converted GCODE
-					</v-btn>
-					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
-						Regen SCARA GCODE
-					</v-btn>
-					<v-btn @click="save_gcode(raw_gcode)" v-if="converted_gcode.length > 0">
-						Save Raw GCODE
 					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
@@ -166,7 +148,7 @@
 					SCARA Sim
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<ScaraSim3D :uploaded_gcode="this.raw_gcode" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+					<ScaraSim3D :uploaded_gcode="raw_gcode" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 		</v-expansion-panels>
@@ -189,16 +171,14 @@ import {ScaraConverter} from "@/ScaraConverter";
 
 import ClickToMove from "@/components/ClickToMove.vue";
 import ScaraSim3D from "@/components/ScaraSim3D.vue";
-import TextToGcode from "@/components/TextToGcode.vue";
-import ImgToGcode from "@/components/ImgToGcode.vue";
 import saveAs from "@/components/FileSaver"
+import GcodeCreator from "@/components/GcodeCreator.vue";
 
 export default Vue.extend({
 	components: {
 		ClickToMove,
 		ScaraSim3D,
-		TextToGcode,
-		ImgToGcode,
+		GcodeCreator
 	},
 	data() {
 		return {
@@ -312,7 +292,7 @@ export default Vue.extend({
 			this.regen_converted_gcode();
 			// Add homing seq to end of gcode
 			// TODO: Consider moving arm out of the way when completed, perhaps using relative move (eg: X+20 Y+20)?
-			this.converted_gcode = this.converted_gcode.concat(["G0Z10"])
+			this.converted_gcode = this.converted_gcode.concat(["G0Z10"]).filter((x) => x.length > 0);
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
@@ -322,6 +302,8 @@ export default Vue.extend({
 			this.ready_to_send = true;
 		},
 		async send_converted_gcode() {
+						console.log(this.converted_gcode)
+
 			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: this.converted_gcode})
 			//this.send_buffer = this.send_buffer.concat(this.converted_gcode);
 			//this.write_next_in_buffer_to_serial();
