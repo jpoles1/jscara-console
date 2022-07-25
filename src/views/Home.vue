@@ -113,15 +113,12 @@
 					GCode Creator
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<GcodeCreator v-on:gcodegen="gcode_from_text"/>
+					<GcodeCreator v-on:gcodegen="gcode_from_gen"/>
 					<br>
-					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+					<v-btn @click="send_converted_gcode" v-if="gcode.length > 0">
 						Send Converted GCODE
 					</v-btn>
-					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
-						Regen SCARA GCODE
-					</v-btn>
-					<v-btn @click="save_gcode(converted_gcode.join('\n'))" v-if="converted_gcode.length > 0">
+					<v-btn @click="save_gcode(gcode.join('\n'))" v-if="gcode.length > 0">
 						Save Converted GCODE
 					</v-btn>
 				</v-expansion-panel-content>
@@ -133,11 +130,8 @@
 				<v-expansion-panel-content>
 					<v-file-input @change="load_gcode_file" placeholder="Upload Cartesian GCODE" />
 					<br>
-					<v-btn @click="send_converted_gcode" v-if="converted_gcode.length > 0">
+					<v-btn @click="send_converted_gcode" v-if="gcode.length > 0">
 						Send Converted GCODE
-					</v-btn>
-					<v-btn @click="regen_converted_gcode" v-if="raw_gcode.length > 0">
-						Regen SCARA GCODE
 					</v-btn>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
@@ -146,7 +140,7 @@
 					SCARA Sim
 				</v-expansion-panel-header>
 				<v-expansion-panel-content>
-					<ScaraSim3D :uploaded_gcode="raw_gcode" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
+					<ScaraSim3D :uploaded_gcode="gcode.join('\n')" :x_offset="scara_conv.x_offset" :y_offset="scara_conv.y_offset"/>
 				</v-expansion-panel-content>
 			</v-expansion-panel>
 		</v-expansion-panels>
@@ -180,12 +174,11 @@ export default Vue.extend({
 	},
 	data() {
 		return {
-			raw_gcode: "",
+			gcode: [] as string[],
 			send_buffer: [] as string[],
 			ready_to_send: true,
 			last_resp: undefined as number | undefined,
 			send_buffer_interval: undefined as any,
-			converted_gcode: [] as string[],
 			scara_conv: new ScaraConverter((e: string) => {this.$toast(e, {x: "center", color: "red"})}),
 			send_log: [] as string[],
 			send_log_index: 0,
@@ -213,7 +206,6 @@ export default Vue.extend({
 			await this.write_serial(raw_gcode);
 		},
 		async home_scara(fold_up=false) {
-			
 			const fold_up_cmd_lines = [
 				"G28"
 			]
@@ -262,25 +254,18 @@ export default Vue.extend({
 			await (navigator as any).serial.requestPort()
 			serialworker.postMessage({ type: MasterCmd.SerialConnect } as WorkerMsg)
 		},
-		regen_converted_gcode() {
-			//this.converted_gcode = this.scara_conv.convert_cartesian_to_scara(this.raw_gcode).split("\n");
-			this.converted_gcode = this.raw_gcode.split("\n")
-		},
 		load_gcode_file(file: File) {
 			if (file === null) return
             const reader = new FileReader();
             reader.onload = (ev: any) => {
-				this.raw_gcode = ev.target!.result;
-				this.regen_converted_gcode();
+				this.gcode = ev.target!.result.split("\n");
 			};
             reader.readAsText(file);
 		},
-		gcode_from_text(gcode: string) {
-			this.raw_gcode = gcode
-			this.regen_converted_gcode();
+		gcode_from_gen(gcode: string[]) {
 			// Add homing seq to end of gcode
 			// TODO: Consider moving arm out of the way when completed, perhaps using relative move (eg: X+20 Y+20)?
-			this.converted_gcode = this.converted_gcode.concat(["G0Z10"]).filter((x) => x.length > 0);
+			this.gcode = gcode.concat(["G0Z10"]).filter((x) => x.length > 0)
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")
@@ -290,9 +275,7 @@ export default Vue.extend({
 			this.ready_to_send = true;
 		},
 		async send_converted_gcode() {
-						console.log(this.converted_gcode)
-
-			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: this.converted_gcode})
+			serialworker.postMessage({ type: MasterCmd.PushToBuffer, data: this.gcode})
 			//this.send_buffer = this.send_buffer.concat(this.converted_gcode);
 			//this.write_next_in_buffer_to_serial();
 		}
@@ -308,6 +291,9 @@ export default Vue.extend({
 				this.serial_connected = true;
 			}
 			else if (msg.type == WorkerCmd.SerialRecv) {
+				this.serial_log.unshift(msg.data)
+			}
+			else if (msg.type == WorkerCmd.JobProg) {
 				this.serial_log.unshift(msg.data)
 			}
 			else if (msg.type == WorkerCmd.SerialError) {

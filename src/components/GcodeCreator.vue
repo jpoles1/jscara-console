@@ -161,7 +161,7 @@ export default Vue.extend({
         },
         svg_to_gcode() {
             const lift_dist = 4; // # of mm to lift pen off page inbetween letters
-            let gcode = ""
+            let gcode = [] as string[]
             let lin_path = ""
             let startpt = [0, 0];
 
@@ -206,7 +206,7 @@ export default Vue.extend({
                 });
                 svgpath.iterate(al.svgPathIterator);
                 // Join with \n and add to the overall gcode string
-                gcode = gcode + "\n" + gcode_cmds.map((x: string[]) => x.join("")).join("\n")
+                gcode = gcode.concat(...gcode_cmds.map((x: string[]) => x.join("")))
                 // Join with a space and add to the overall gcode string
                 lin_path = lin_path + " " + svg_cmds.join(" ")
             })
