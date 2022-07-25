@@ -68,6 +68,15 @@
 </template>
 
 <script lang="ts">
+
+function replaceChildren(elem: Element, ...new_children: Element[]) {
+  const { childNodes } = elem;
+  while (childNodes.length) {
+    childNodes[0].remove();
+  }
+  elem.append(...new_children);
+}
+
 import opentype from "opentype.js"
 import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/index"
 import SVGPath from "svgpath"
@@ -269,7 +278,7 @@ export default Vue.extend({
                 reader.onload = (ev: any) => {
                     this.raw_svg = reader.result as string;
                     const svgdoc = new DOMParser().parseFromString(this.raw_svg, "image/svg+xml");
-                    document.getElementById("svg-tester")!.replaceChildren(svgdoc.documentElement);
+                    replaceChildren(document.getElementById("svg-tester")!, svgdoc.documentElement);
                     this.set_svg_viewport();
                 };
                 reader.readAsText(file);
@@ -291,7 +300,7 @@ export default Vue.extend({
                     potrace.trace(this.raw_photo, this.potrace_params, (err: Error, svg: string) => {
                         if (err) throw err;
                         const svgdoc = new DOMParser().parseFromString(svg, "image/svg+xml");
-                        document.getElementById("svg-tester")!.replaceChildren(svgdoc.documentElement);
+                        replaceChildren(document.getElementById("svg-tester")!, svgdoc.documentElement);
                         this.set_svg_viewport();
                     });
                 }
@@ -385,7 +394,7 @@ export default Vue.extend({
                     const svgdoc = new DOMParser().parseFromString(raw_svg, "image/svg+xml");
                     console.log(svgdoc)
 
-                    document.getElementById("svg-tester")!.replaceChildren(svgdoc.documentElement);
+                    replaceChildren(document.getElementById("svg-tester")!, svgdoc.documentElement);
                     this.set_svg_viewport();
                     resolve(undefined);
                 }
@@ -399,7 +408,7 @@ export default Vue.extend({
             svg_elem.setAttribute("width", this.svg_w + "px");
             svg_elem.setAttribute("height", this.svg_h + "px");
             svg_elem.id = "svg-render"
-            document.getElementById("svg-drr")!.replaceChildren(svg_elem);
+            replaceChildren(document.getElementById("svg-drr")!, svg_elem);
             //document.getElementById("svg-drr")!.innerHTML = svg_elem.outerHTML
             //document.getElementById("svg-drr")!.innerHTML = `<img src="https://upload.wikimedia.org/wikipedia/commons/f/f9/Five_Pointed_Star_Solid.svg" style="width: 100%; height: 100%" />`
         },
