@@ -103,8 +103,6 @@
 				</div>
 				<ClickToMove v-on:move="click_move"/>
 			</div>
-			<v-text-field type="number" v-model.number="scara_conv.x_offset" label="X Offset" style="width: 100px;"/>
-			<v-text-field type="number" v-model.number="scara_conv.y_offset" label="Y Offset" style="width: 100px;"/>
 		</div>
 		<div style="margin-top: 14px; min-height: 20vh; max-height: 30vh; width: 90%; overflow-y: scroll; border: 1px dotted #333;">
 			<span v-for="(entry, entryIndex) in serial_log" :key="entryIndex" v-html="entry" />
@@ -203,16 +201,6 @@ export default Vue.extend({
 			writer: undefined as WritableStreamDefaultWriter<any> | undefined,
 			regen_debounce: 0,
 		};
-	},
-	watch: {
-		"scara_conv.x_offset"() {
-			clearTimeout(this.regen_debounce)
-			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
-		},
-		"scara_conv.y_offset"() {
-			clearTimeout(this.regen_debounce)
-			this.regen_debounce = setTimeout(this.regen_converted_gcode, 500)
-		},
 	},
 	methods: {
 		async click_move([x, y]: [number, number]) {
