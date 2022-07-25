@@ -17,17 +17,29 @@
                     <v-file-input @change="load_img_file" placeholder="Upload Image" accept=".svg,.png,.jpg,.jpeg"/>
                     <div v-if="imageType == 'photo'">
                         <br>
-                        <v-slider v-model="potrace_params.threshold" thumb-label="always" @change="photo_to_svg" min=-1 max=255  label="Threshold">
-                            <template v-slot:append>
-                                <v-icon v-ripple @click="potrace_params.threshold = -1" v-show="potrace_params.threshold != -1">
-                                    mdi-replay
-                                </v-icon>
-                            </template>
-                        </v-slider>
-                        <br>
-                        <v-slider v-model="potrace_params.turdSize" thumb-label="always" @change="photo_to_svg" min=0 max=50  label="Min Speckle Size"/>
-                        <br>
-                        <v-checkbox v-model="potrace_params.blackOnWhite"  @change="photo_to_svg" label="Invert"/>
+                        <v-radio-group v-model="photo_mode" @change="photo_to_svg">
+                            <v-radio value="squiggle" label="Squiggle"/>
+                            <v-radio value="potrace" label="Potrace"/>
+                        </v-radio-group>
+                        <div v-if="photo_mode == 'potrace'">
+                            <v-slider v-model="potrace_params.threshold" thumb-label="always" @change="photo_to_svg" min=-1 max=255  label="Threshold">
+                                <template v-slot:append>
+                                    <v-icon v-ripple @click="potrace_params.threshold = -1" v-show="potrace_params.threshold != -1">
+                                        mdi-replay
+                                    </v-icon>
+                                </template>
+                            </v-slider>
+                            <br>
+                            <v-slider v-model="potrace_params.turdSize" thumb-label="always" @change="photo_to_svg" min=0 max=50  label="Min Speckle Size"/>
+                            <br>
+                            <v-checkbox v-model="potrace_params.blackOnWhite"  @change="photo_to_svg" label="Invert"/>
+                        </div>
+                        <div v-if="photo_mode == 'squiggle'">
+                            <v-slider v-model="squiggle_config.frequency" thumb-label="always" @change="photo_to_svg" min=5 max=256  label="Frequency"/>
+                            <v-slider v-model="squiggle_config.lineCount" thumb-label="always" @change="photo_to_svg" min=10 max=200  label="# Lines"/>
+                            <v-slider v-model="squiggle_config.amplitude" thumb-label="always" @change="photo_to_svg" min=0.1 max=5 step=0.1 label="Amplitude"/>
+                            <v-slider v-model="squiggle_config.spacing" thumb-label="always" @change="photo_to_svg" min=0.5 max=3 step="0.1" label="Sampling"/>
+                        </div>
                     </div>
                 </div>
             </v-tab-item>
@@ -85,10 +97,26 @@ export default Vue.extend({
                 {name: "ChunkFive (block)", file: "ChunkFive-Regular.otf"},
                 {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
             ],
+
+            photo_mode: "squiggle",
+            photo_upload_max_dim: 500,
             potrace_params: {
                 threshold: -1,
                 turdSize: 15,
                 blackOnWhite: true,
+            },
+            squiggle_config: {
+                black: false,
+                frequency: 100,
+                amplitude: 2.0 as number,
+                lineCount: 50,
+                brightness: 0 as number,
+                contrast: 0 as number,
+                minBrightness: 0 as number,
+                maxBrightness: 255,
+                spacing: 0.5 as number,
+                width: 400,
+                height: 500
             },
 
             plot_scale: plot_scale,
@@ -104,6 +132,7 @@ export default Vue.extend({
             svg_rot: 0,
 
             raw_photo: undefined as ArrayBuffer | undefined,
+            photo_blob: undefined as Blob | undefined,
             raw_svg: "",
             imageType: "",
         }
@@ -250,21 +279,119 @@ export default Vue.extend({
                     this.raw_photo = reader.result as ArrayBuffer;
                     this.photo_to_svg();
                 };
-                await imgreduce().toBlob(file, {max: 400}).then(((reducedFile: File) => reader.readAsArrayBuffer(reducedFile)))
+                await imgreduce().toBlob(file, {max: this.photo_upload_max_dim}).then(((reducedFile: File) => { this.photo_blob = reducedFile; reader.readAsArrayBuffer(reducedFile)}))
             }
             else {
                 this.imageType = ""
             }
         },
-        photo_to_svg() {
-            if(this.raw_photo != undefined) {
-                potrace.trace(this.raw_photo, this.potrace_params, (err: Error, svg: string) => {
-                    if (err) throw err;
-                    const svgdoc = new DOMParser().parseFromString(svg, "image/svg+xml");
+        async photo_to_svg() {
+            if (this.photo_mode=="potrace") {
+                if(this.raw_photo != undefined) {
+                    potrace.trace(this.raw_photo, this.potrace_params, (err: Error, svg: string) => {
+                        if (err) throw err;
+                        const svgdoc = new DOMParser().parseFromString(svg, "image/svg+xml");
+                        document.getElementById("svg-tester")!.replaceChildren(svgdoc.documentElement);
+                        this.set_svg_viewport();
+                    });
+                }
+            }
+            if (this.photo_mode == "squiggle") {
+                await this.photo_to_svg_squiggle();
+            }
+        },
+        async photo_to_svg_squiggle() {
+            const config = this.squiggle_config
+            const width = config.width;
+            const height = config.height;
+            const contrast = config.contrast;
+            const brightness = config.brightness;
+            const lineCount = config.lineCount;
+            const minBrightness = config.minBrightness;
+            const maxBrightness = config.maxBrightness;
+            const spacing = config.spacing;
+            const black = config.black;
+
+            let imagePixels: ImageData;
+            let canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            let img = new Image();
+            const p = new Promise((resolve, reject) => {
+                img.onload = () => {
+                    console.log("WAIT")
+                    ctx!.drawImage(img, 0, 0)
+                    imagePixels = ctx!.getImageData(0, 0, width, height);
+                    // Create some defaults for squiggle-point array
+                    let squiggleData = [];
+                    let r = 5;
+                    let a = 0;
+                    let b;
+                    let z;
+                    let currentLine = []; // create empty array for storing x,y coordinate pairs
+                    let currentVerticalPixelIndex = 0;
+                    let currentHorizontalPixelIndex = 0;
+                    let contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast)); // This was established through experiments
+                    let horizontalLineSpacing = Math.floor(height / lineCount); // Number of pixels to advance in vertical direction
+                    // Iterate line by line (top line to bottom line) in increments of horizontalLineSpacing
+                    //let tmpCounter = 0;
+                    for (let y = 0; y < height; y+= horizontalLineSpacing) {
+                        a = 0;
+                        currentLine = [];
+                        currentLine.push([0, y]); // Start the line
+                        currentVerticalPixelIndex = y*width;  // Because Image Pixel array is of length width * height,
+                                                                // starting pixel for each line will be this
+                        // Loop through pixels from left to right within the current line, advancing by increments of config.SPACING
+                        //console.log(config.spacing, width);
+                        for (let x = spacing; x < width; x += spacing ) {
+                            currentHorizontalPixelIndex = Math.floor(x + currentVerticalPixelIndex); // Get array position of current pixel
+                            // When there is contrast adjustment, the calculations of brightness values are a bit different
+                            if (contrast !== 0) {
+                            // Determine how bright a pixel is, from 0 to 255 by summing three channels (R,G,B) multiplied by some coefficients
+                            b = (0.2125 * ((contrastFactor * (imagePixels!.data[4 * currentHorizontalPixelIndex] - 128) + 128 )
+                                + brightness)) + (0.7154 * ((contrastFactor * (imagePixels!.data[4 * (currentHorizontalPixelIndex + 1)] - 128) + 128)
+                                + brightness)) + (0.0721 * ((contrastFactor*(imagePixels!.data[4*(currentHorizontalPixelIndex+2)]-128)+128) + brightness));
+                            } else {
+                            b = (0.2125 * (imagePixels!.data[4*currentHorizontalPixelIndex] + brightness)) + (0.7154 * (imagePixels!.data[4*(currentHorizontalPixelIndex + 1)]+ brightness)) + (0.0721 * (imagePixels!.data[4*(currentHorizontalPixelIndex + 2)] + brightness));
+                            }
+                            if (black) {
+                            b = Math.min(255-minBrightness,255-b);    // Set minimum line curvature to value set by the user
+                            z = Math.max(maxBrightness-b,0);  // Set maximum line curvature to value set by the user
+                            } else {
+                            b = Math.max(minBrightness,b);    // Set minimum line curvature to value set by the user
+                            z = Math.max(maxBrightness-b,0);  // Set maximum line curvature to value set by the user
+                            }
+                            // The magic of the script, determines how high / low the squiggle goes
+                            r = config.amplitude * z / lineCount;
+                            a += z / config.frequency;
+                            currentLine.push([x,y + Math.sin(a)*r]);
+                        }
+                        //currentLine.push([config.width, y]);
+                        squiggleData.push(currentLine);
+                    }
+                    const svg_paths = squiggleData.map((path) => {
+                        let svg_path = "";
+                        path.map((point, index) => {
+                            if (index === 0) {
+                                svg_path += `M ${point[0]},${point[1]}`;
+                            } else {
+                                svg_path += `L${Math.round(point[0] * 100) / 100},${Math.round(point[1]*100)/100}`
+                            }
+                        });
+                        return `<path d="${svg_path}"/>`;
+                    })
+                    const raw_svg = `<svg xmlns="http://www.w3.org/2000/svg">${svg_paths.join("\n")}</svg>`;
+                    const svgdoc = new DOMParser().parseFromString(raw_svg, "image/svg+xml");
+                    console.log(svgdoc)
+
                     document.getElementById("svg-tester")!.replaceChildren(svgdoc.documentElement);
                     this.set_svg_viewport();
-                });
-            }
+                    resolve(undefined);
+                }
+            });
+            img.src = URL.createObjectURL(this.photo_blob!);
+            return p
         },
         display_svg(svg_elem: SVGElement) {
             svg_elem.style.width = "100%"
