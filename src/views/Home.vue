@@ -265,7 +265,7 @@ export default Vue.extend({
 		gcode_from_gen(gcode: string[]) {
 			// Add homing seq to end of gcode
 			// TODO: Consider moving arm out of the way when completed, perhaps using relative move (eg: X+20 Y+20)?
-			this.gcode = gcode.concat(["G0Z10"]).filter((x) => x.length > 0)
+			this.gcode = ["G28", "G0 X120 Y120 F20000"].concat(gcode, ["G0Z10"]).filter((x) => x.length > 0)
 		},
 		save_gcode(gcode: string) {
 			(saveAs as any)(new Blob([gcode], {type: 'text/plain'}), "jscara_export.gcode")

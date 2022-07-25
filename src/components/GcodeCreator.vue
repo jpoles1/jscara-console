@@ -18,6 +18,7 @@
                     <div v-if="imageType == 'photo'">
                         <br>
                         <v-radio-group v-model="photo_mode" @change="photo_to_svg">
+                            <v-radio value="tsp" label="Traveling Salesman"/>
                             <v-radio value="squiggle" label="Squiggle"/>
                             <v-radio value="potrace" label="Potrace"/>
                         </v-radio-group>
@@ -39,6 +40,12 @@
                             <v-slider v-model="squiggle_config.lineCount" thumb-label="always" @change="photo_to_svg" min=10 max=200  label="# Lines"/>
                             <v-slider v-model="squiggle_config.amplitude" thumb-label="always" @change="photo_to_svg" min=0.1 max=5 step=0.1 label="Amplitude"/>
                             <v-slider v-model="squiggle_config.spacing" thumb-label="always" @change="photo_to_svg" min=0.5 max=3 step="0.1" label="Sampling"/>
+                        </div>
+                        <div v-if="photo_mode == 'tsp'">
+                            <v-slider v-model="tsp_config.resolution" thumb-label="always" @change="photo_to_svg" min=5 max=30 label="Resolution"/>
+                            <v-slider v-model="tsp_config.contrast" thumb-label="always" @change="photo_to_svg" min=0 max=100 step=5 label="Contrast"/>
+                            <v-slider v-model="tsp_config.whiteCutoff" thumb-label="always" @change="photo_to_svg" min=0 max=255 step=5 label="White Cutoff"/>
+                            <v-checkbox v-model="tsp_config.invert"  @change="photo_to_svg" label="Invert"/>
                         </div>
                     </div>
                 </div>
@@ -82,6 +89,7 @@ import {AdaptiveLinearization} from "@/components/adaptive-linearization/src/ind
 import SVGPath from "svgpath"
 import potrace from "potrace"
 import imgreduce from "image-blob-reduce"
+import OneLineClient from './OneLineClient.js';
 
 import Vue from "vue"
 export default Vue.extend({
@@ -107,7 +115,7 @@ export default Vue.extend({
                 {name: "GreatVibes (caligraphy)", file: "GreatVibes-Regular.ttf"},
             ],
 
-            photo_mode: "squiggle",
+            photo_mode: "tsp",
             photo_upload_max_dim: 500,
             potrace_params: {
                 threshold: -1,
@@ -124,6 +132,15 @@ export default Vue.extend({
                 minBrightness: 0 as number,
                 maxBrightness: 255,
                 spacing: 0.5 as number,
+            },
+            tsp_config: {
+                resolution: 20,
+                contrast: 80,
+                whiteCutoff: 240,
+                invert: false,
+                lineWidth: 4,
+                fg: "black",
+                bg: "white",
             },
 
             plot_scale: plot_scale,
@@ -206,11 +223,15 @@ export default Vue.extend({
                 });
                 svgpath.iterate(al.svgPathIterator);
                 // Join with \n and add to the overall gcode string
-                gcode = gcode.concat(...gcode_cmds.map((x: string[]) => x.join("")))
+                console.log(gcode_cmds.map((x: string[]) => x.join("")))
+                gcode = gcode_cmds.map((x: string[]) => x.join("")).reduce((agg, arr) => {
+                    agg.push(arr);
+                    return agg
+                }, [] as string[])
                 // Join with a space and add to the overall gcode string
                 lin_path = lin_path + " " + svg_cmds.join(" ")
             })
-            //console.log(gcode)
+            console.log(gcode)
             this.$emit("gcodegen", gcode)
         },
         opentype_promise_font(url: string): Promise<opentype.Font> {
@@ -305,6 +326,16 @@ export default Vue.extend({
             }
             if (this.photo_mode == "squiggle") {
                 await this.photo_to_svg_squiggle();
+            }
+            if (this.photo_mode == "tsp") {
+                OneLineClient.setImage(this.raw_photo);
+                OneLineClient.onResult = ((d: any) => {
+                    const raw_svg = d.result
+                    const svgdoc = new DOMParser().parseFromString(raw_svg, "image/svg+xml");
+                    replaceChildren(document.getElementById("svg-tester")!, svgdoc.documentElement);
+                    this.set_svg_viewport();
+                }) as any
+                OneLineClient.build(this.tsp_config);
             }
         },
         async photo_to_svg_squiggle(single_line=true) {
