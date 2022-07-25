@@ -124,8 +124,6 @@ export default Vue.extend({
                 minBrightness: 0 as number,
                 maxBrightness: 255,
                 spacing: 0.5 as number,
-                width: 400,
-                height: 500
             },
 
             plot_scale: plot_scale,
@@ -309,10 +307,10 @@ export default Vue.extend({
                 await this.photo_to_svg_squiggle();
             }
         },
-        async photo_to_svg_squiggle() {
+        async photo_to_svg_squiggle(single_line=true) {
             const config = this.squiggle_config
-            const width = config.width;
-            const height = config.height;
+            //const width = config.width;
+            //const height = config.height;
             const contrast = config.contrast;
             const brightness = config.brightness;
             const lineCount = config.lineCount;
@@ -323,17 +321,18 @@ export default Vue.extend({
 
             let imagePixels: ImageData;
             let canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
             const ctx = canvas.getContext('2d');
             let img = new Image();
             const p = new Promise((resolve, reject) => {
                 img.onload = () => {
-                    console.log("WAIT")
+                    const width = img.width;
+                    const height = img.height;
+                    canvas.width = width
+                    canvas.height = height
                     ctx!.drawImage(img, 0, 0)
                     imagePixels = ctx!.getImageData(0, 0, width, height);
                     // Create some defaults for squiggle-point array
-                    let squiggleData = [];
+                    let squiggleData = [] as number[][][];
                     let r = 5;
                     let a = 0;
                     let b;
@@ -343,8 +342,11 @@ export default Vue.extend({
                     let currentHorizontalPixelIndex = 0;
                     let contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast)); // This was established through experiments
                     let horizontalLineSpacing = Math.floor(height / lineCount); // Number of pixels to advance in vertical direction
+                    
+                    //If wrapping lines we alternate which dir we process each line
+                    let line_dir: boolean = false; // 0 = L to R, 1 = R to L
+                    
                     // Iterate line by line (top line to bottom line) in increments of horizontalLineSpacing
-                    //let tmpCounter = 0;
                     for (let y = 0; y < height; y+= horizontalLineSpacing) {
                         a = 0;
                         currentLine = [];
@@ -376,10 +378,16 @@ export default Vue.extend({
                             a += z / config.frequency;
                             currentLine.push([x,y + Math.sin(a)*r]);
                         }
-                        //currentLine.push([config.width, y]);
+                        if (line_dir) {
+                            currentLine = currentLine.reverse()
+                        }
                         squiggleData.push(currentLine);
+                        if(single_line) {
+                            line_dir = !line_dir
+                        }
                     }
-                    const svg_paths = squiggleData.map((path) => {
+                    squiggleData = [([] as number[][]).concat(...squiggleData)]
+                    const svg_paths = squiggleData.map((path: number[][]) => {
                         let svg_path = "";
                         path.map((point, index) => {
                             if (index === 0) {
