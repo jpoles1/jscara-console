@@ -219,7 +219,7 @@ export default Vue.extend({
 			const home_cmd_lines = [
 				"G28",
 				"G0 F20000",
-				"G0 X120 Y120 F20000",
+				"G0 X120 Y120 Z5 F20000",
 			];
 			const cmd_lines = fold_up ? fold_up_cmd_lines : home_cmd_lines;
 			for (const gcode_line_index in cmd_lines) {
